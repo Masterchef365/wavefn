@@ -42,8 +42,10 @@ struct Shape {
 }
 
 /// Convert a set of shapes into a set of tiles useable by the solver as rules
-fn compile(shapes: &[Shape]) -> Vec<Tile> {
-    todo!()
+fn compile_tiles(shapes: &[Shape]) -> (Vec<Tile>, Vec<f32>) {
+    let weights = todo!();
+    let tiles = todo!();
+    (tiles, weights)
 }
 */
 
