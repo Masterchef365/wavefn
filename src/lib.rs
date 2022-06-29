@@ -51,6 +51,7 @@ fn compile_tiles(shapes: &[Shape]) -> (Vec<Tile>, Vec<f32>) {
 
 fn draw_solve(solver: &Solver) -> GraphicsBuilder {
     let mut gb = GraphicsBuilder::new();
+    todo!()
 }
 
 fn extend_gb(dest: &mut GraphicsBuilder, src: &GraphicsBuilder, ) {
