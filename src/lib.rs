@@ -18,7 +18,6 @@ use std::collections::HashSet;
 
 use idek_basics::{Array2D, GraphicsBuilder};
 
-/*
 enum Symmetry {
     /// No transformation
     Identity,
@@ -47,29 +46,22 @@ fn compile_tiles(shapes: &[Shape]) -> (Vec<Tile>, Vec<f32>) {
     let tiles = todo!();
     (tiles, weights)
 }
-*/
-
-fn draw_solve(solver: &Solver) -> GraphicsBuilder {
-    let mut gb = GraphicsBuilder::new();
-    todo!()
-}
-
-fn extend_gb(dest: &mut GraphicsBuilder, src: &GraphicsBuilder, ) {
-    let base = dest.vertices.len() as u32;
-}
 
 /// Each entry refers to one other tile in an array of Tiles (a RuleSet)
 /// The boolean is true if the tile can be made adjacent to it
-type TileSet = Vec<bool>;
+/// TODO: Use a more efficient data structure!
+///     * densely packed bits, u8s or maybe u128s or SIMD?
+///     * Sorted array of usize? (indices)
+pub type TileSet = Vec<bool>;
 
-struct Tile {
+pub struct Tile {
     /// Transformed art
     art: GraphicsBuilder,
     /// Sets of tiles which can be adjacent to this one
     rules: [TileSet; 4],
 }
 
-enum ControlFlow {
+pub enum ControlFlow {
     Contradiction,
     Finish,
     Continue,
@@ -77,7 +69,7 @@ enum ControlFlow {
     //ContinueChooseNew,
 }
 
-struct Solver {
+pub struct Solver {
     /// Tiles in use
     tiles: Vec<Tile>,
     /// Grid of tile sets. Invalid if all false.
@@ -102,11 +94,15 @@ impl Solver {
         }
     }
 
+    pub fn grid(&self) -> &Array2D<TileSet> {
+        &self.grid
+    }
+
     pub fn step(&mut self) -> ControlFlow {
         if self.dirty.is_empty() {
-            self.step_dirty()
-        } else {
             self.step_random()
+        } else {
+            self.step_dirty()
         }
     }
 
