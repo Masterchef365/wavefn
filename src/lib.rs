@@ -2,6 +2,7 @@ use idek_basics::{
     idek::nalgebra::{Isometry3, Similarity3, Vector3},
     Array2D, ShapeBuilder,
 };
+use pcg::Rng;
 use std::{collections::HashSet, f32::consts::FRAC_PI_2};
 pub mod pcg;
 
@@ -148,6 +149,8 @@ pub struct Solver {
     grid: Array2D<TileSet>,
     /// Tile coordinates to be updated next, if any
     dirty: HashSet<(usize, usize)>,
+    /// Random number generator
+    rng: Rng,
 }
 
 pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Array2D<TileSet> {
@@ -159,6 +162,7 @@ pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Array2D<TileSet
 impl Solver {
     pub fn from_grid(tiles: Vec<Tile>, grid: Array2D<TileSet>) -> Self {
         Self {
+            rng: Rng::new(),
             tiles,
             grid,
             dirty: HashSet::new(),
@@ -182,6 +186,7 @@ impl Solver {
     }
 
     fn step_dirty(&mut self) -> ControlFlow {
+        dbg!(&self.dirty);
         // Determine which tile set to update
         // Unwrap is okay because we are only called from step(); array length is checked there
         let pos = self.dirty.iter().next().copied().unwrap();
@@ -189,7 +194,7 @@ impl Solver {
 
         // Create a new tile set
         let mut new_tile_set = self.grid[pos].clone();
-        let neighborhood = sample_bndchk(&self.grid, pos);
+        let neighborhood = neighbor_coords(&self.grid, pos);
 
         // Determine for each neighbor...
         for (neigh_idx, neigh) in neighborhood.into_iter().enumerate() {
@@ -224,12 +229,48 @@ impl Solver {
     }
 
     fn step_random(&mut self) -> ControlFlow {
-        // if finished collapsing, return finished else continue
-        todo!("Shannon entropy random selection")
+        //todo!("Shannon entropy random selection")
+        let lowest_n = self
+            .grid()
+            .data()
+            .iter()
+            .map(count_tileset)
+            .min()
+            .expect("No tiles");
+        let mut lowest = vec![];
+
+        for y in 0..self.grid.height() {
+            for x in 0..self.grid.width() {
+                let n = count_tileset(&self.grid[(x, y)]);
+                if n == lowest_n {
+                    lowest.push((x, y));
+                }
+            }
+        }
+
+        if let Some(lowest) = choose(&mut self.rng, &lowest) {
+            self.dirty.insert(*lowest);
+            ControlFlow::Continue
+        } else {
+            ControlFlow::Finish
+        }
     }
 }
 
-fn sample_bndchk<T>(arr: &Array2D<T>, (x, y): (usize, usize)) -> [Option<(usize, usize)>; 4] {
+fn count_tileset(ts: &TileSet) -> usize {
+    ts.iter().filter(|p| **p).count()
+}
+
+fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
+    if arr.is_empty() {
+        None
+    } else {
+        let idx = rng.gen() as usize % arr.len();
+        Some(&arr[idx])
+    }
+}
+
+fn neighbor_coords<T>(arr: &Array2D<T>, (x, y): (usize, usize)) -> [Option<(usize, usize)>; 4] {
     [(-1, 0), (0, -1), (1, 0), (0, 1)]
         .map(|(dx, dy)| bnd_chk(x, dx, arr.width()).zip(bnd_chk(y, dy, arr.height())))
 }

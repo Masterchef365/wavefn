@@ -103,6 +103,10 @@ impl App for CubeDemo {
 
         let mut solver = Solver::from_grid(tiles, grid);
 
+        for _ in 0..10 {
+            solver.step();
+        }
+
         //solver.step();
 
         draw_solver(&mut line_gb, &solver);
