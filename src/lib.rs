@@ -134,6 +134,7 @@ pub struct Tile {
     pub rules: [TileSet; 4],
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ControlFlow {
     Contradiction,
     Finish,
@@ -186,7 +187,6 @@ impl Solver {
     }
 
     fn step_dirty(&mut self) -> ControlFlow {
-        dbg!(&self.dirty);
         // Determine which tile set to update
         // Unwrap is okay because we are only called from step(); array length is checked there
         let pos = self.dirty.iter().next().copied().unwrap();
@@ -202,7 +202,7 @@ impl Solver {
                 // ... For each possible tile that neighbor could be...
                 for (idx, cond) in self.grid[neigh].iter().enumerate() {
                     if *cond {
-                        // ... Whether or not that tile set contains us
+                        // ... Whether or not that tile intersects with our set
                         new_tile_set[idx] &= self.tiles[idx].rules[neigh_idx][idx];
                     }
                 }
@@ -219,6 +219,7 @@ impl Solver {
             // ... and if so, mark neighbors as dirty:
             for neigh in neighborhood {
                 if let Some(neigh) = neigh {
+                    dbg!(neigh);
                     self.dirty.insert(neigh);
                 }
             }
@@ -235,6 +236,7 @@ impl Solver {
             .data()
             .iter()
             .map(count_tileset)
+            .filter(|&c| c > 1)
             .min()
             .expect("No tiles");
         let mut lowest = vec![];
@@ -249,6 +251,7 @@ impl Solver {
         }
 
         if let Some(lowest) = choose(&mut self.rng, &lowest) {
+            dbg!(lowest);
             self.dirty.insert(*lowest);
             ControlFlow::Continue
         } else {
@@ -279,6 +282,7 @@ fn bnd_chk(x: usize, dx: isize, max: usize) -> Option<usize> {
     if dx < 0 {
         x.checked_sub(-dx as usize)
     } else {
-        (x < max).then(|| x + dx as usize)
+        let x = x + dx as usize;
+        (x < max).then(|| x)
     }
 }

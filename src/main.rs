@@ -7,7 +7,7 @@ use idek_basics::{
     Array2D, ShapeBuilder,
 };
 use wavefn::{
-    apply_symmetry, compile_tiles, init_grid, pcg::Rng, Shape, Solver, Symmetry, Tile, TileSet,
+    apply_symmetry, compile_tiles, init_grid, pcg::Rng, Shape, Solver, Symmetry, Tile, TileSet, ControlFlow,
 };
 
 fn main() -> Result<()> {
@@ -23,6 +23,10 @@ struct CubeDemo {
     tri_verts: VertexBuffer,
     tri_indices: IndexBuffer,
     tri_gb: ShapeBuilder,
+
+    solver: Solver,
+
+    frame: usize,
 }
 
 const CONN_WALL: u32 = 0;
@@ -103,12 +107,6 @@ impl App for CubeDemo {
 
         let mut solver = Solver::from_grid(tiles, grid);
 
-        for _ in 0..10 {
-            solver.step();
-        }
-
-        //solver.step();
-
         draw_solver(&mut line_gb, &solver);
 
         path_right(&mut tri_gb);
@@ -134,12 +132,30 @@ impl App for CubeDemo {
             tri_verts,
             tri_indices,
             tri_gb,
+            
+            solver,
+
+            frame: 0,
         })
     }
 
     fn frame(&mut self, ctx: &mut Context, _: &mut Platform) -> Result<Vec<DrawCmd>> {
-        ctx.update_vertices(self.tri_verts, &self.tri_gb.vertices)?;
-        ctx.update_vertices(self.line_verts, &self.line_gb.vertices)?;
+        if self.frame % 1 == 0 {
+            if self.solver.step() != ControlFlow::Continue {
+                panic!()
+            }
+
+            self.line_gb.clear();
+
+            draw_solver(&mut self.line_gb, &self.solver);
+
+            assert!(!self.line_gb.vertices.is_empty());
+            assert!(!self.line_gb.indices.is_empty());
+            ctx.update_vertices(self.line_verts, &self.line_gb.vertices)?;
+            ctx.update_indices(self.line_indices, &self.line_gb.indices)?;
+        }
+
+        self.frame += 1;
 
         Ok(vec![
             //DrawCmd::new(self.tri_verts).indices(self.tri_indices),
