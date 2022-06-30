@@ -134,7 +134,7 @@ impl App for CubeDemo {
     }
 
     fn frame(&mut self, ctx: &mut Context, _: &mut Platform) -> Result<Vec<DrawCmd>> {
-        let frame = self.frame % 1 == 0;
+        let frame = self.frame % 10 == 0;
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
@@ -175,7 +175,7 @@ impl App for CubeDemo {
 }
 
 fn new_solver(rng: &mut Rng, tiles: &[Tile]) -> Solver {
-    let w = 20;
+    let w = 5;
     let mut grid = init_grid(w, w, &tiles);
 
     for _ in 0..4 {

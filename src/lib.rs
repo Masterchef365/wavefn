@@ -257,19 +257,23 @@ impl Solver {
 
     fn step_random(&mut self, rng: &mut Rng) -> ControlFlow {
         //todo!("Shannon entropy random selection")
-        let lowest_n = self
-            .grid()
-            .data()
-            .iter()
-            .map(count_tileset)
-            .filter(|&c| c > 1)
-            .min()
-            .expect("No tiles");
+        let mut lowest_n = usize::MAX;
+        for y in 0..self.grid.height() {
+            for x in 0..self.grid.width() {
+                if count_tileset(&self.grid[(x, y)]) > 1 {
+                    let n = tile_entropy(&self.grid, (x, y));
+                    if n < lowest_n {
+                        lowest_n = n;
+                    }
+                }
+            }
+        }
+
         let mut lowest = vec![];
 
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
-                let n = count_tileset(&self.grid[(x, y)]);
+                let n = tile_entropy(&self.grid, (x, y));
                 if n == lowest_n {
                     lowest.push((x, y));
                 }
@@ -288,6 +292,19 @@ impl Solver {
             ControlFlow::Finish
         }
     }
+}
+
+fn tile_entropy(grid: &Array2D<TileSet>, pos: (usize, usize)) -> usize {
+    let mut n = count_tileset(&grid[pos]);
+
+    for neigh in neighbor_coords(grid, pos) {
+        if let Some(neigh) = neigh {
+            n += count_tileset(&grid[neigh]);
+        } else {
+            n += grid[(0, 0)].len();
+        }
+    }
+    n
 }
 
 fn count_tileset(ts: &TileSet) -> usize {
