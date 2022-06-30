@@ -16,35 +16,46 @@ V
 
 use std::collections::HashSet;
 
-use idek_basics::{Array2D, GraphicsBuilder};
+use idek_basics::{Array2D, OffsetBuilder};
 
-enum Symmetry {
+pub enum Symmetry {
     /// No transformation
     Identity,
     /// One 45-degree tf
     Rot2,
     /// Rotate 4 ways 45 degrees in the plane
     Rot4,
-    /// Mirror _over_ the y axis (inverts art indices)
-    MirrorX,
-    /// Mirror _over_ the x axis (inverts art indices)
-    MirrorY,
+    // /// Mirror _over_ the y axis (inverts art indices)
+    // MirrorX,
+    // /// Mirror _over_ the x axis (inverts art indices)
+    // MirrorY,
 }
 
-struct Shape {
-    art: GraphicsBuilder,
-    sym: Symmetry,
-    /// Each number corresponds to an interface type. If left at 0, any interface can connect.
-    conn: [u32; 4],
-    /// Weight relative to other shapes
-    weight: f32,
+pub struct Shape {
+    pub art: OffsetBuilder,
+    /// Each number corresponds to an interface type.
+    pub conn: [u32; 4],
+    // /// Weight relative to other shapes
+    // pub weight: f32,
+}
+
+pub fn apply_symmetry(shape: &Shape, sym: Symmetry) -> Vec<Shape> {
+    todo!()
 }
 
 /// Convert a set of shapes into a set of tiles useable by the solver as rules
-fn compile_tiles(shapes: &[Shape]) -> (Vec<Tile>, Vec<f32>) {
-    let weights = todo!();
-    let tiles = todo!();
-    (tiles, weights)
+//pub fn compile_tiles(shapes: &[Shape]) -> (Vec<Tile>, Vec<f32>) {
+pub fn compile_tiles(shapes: &[Shape]) -> Vec<Tile> {
+    let mut tiles = vec![];
+
+    for shape in shapes {
+        tiles.push(Tile {
+            art: shape.art.clone(),
+            rules: [(); 4].map(|_| Vec::new()),
+        });
+    }
+
+    tiles
 }
 
 /// Each entry refers to one other tile in an array of Tiles (a RuleSet)
@@ -56,9 +67,9 @@ pub type TileSet = Vec<bool>;
 
 pub struct Tile {
     /// Transformed art
-    art: GraphicsBuilder,
+    pub art: OffsetBuilder,
     /// Sets of tiles which can be adjacent to this one
-    rules: [TileSet; 4],
+    pub rules: [TileSet; 4],
 }
 
 pub enum ControlFlow {
@@ -98,6 +109,10 @@ impl Solver {
         &self.grid
     }
 
+    pub fn tiles(&self) -> &[Tile] {
+        &self.tiles
+    }
+
     pub fn step(&mut self) -> ControlFlow {
         if self.dirty.is_empty() {
             self.step_random()
@@ -119,7 +134,6 @@ impl Solver {
         // Determine for each neighbor...
         for (neigh_idx, neigh) in neighborhood.into_iter().enumerate() {
             if let Some(neigh) = neigh {
-
                 // ... For each possible tile that neighbor could be...
                 for (idx, cond) in self.grid[neigh].iter().enumerate() {
                     if *cond {
