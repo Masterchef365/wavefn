@@ -274,16 +274,25 @@ pub fn draw_tile(gb: &mut ShapeBuilder, set: &TileSet, tiles: &[Tile]) {
     let total = set.iter().filter(|p| **p).count();
     let side_len = ceil_pow2(total);
 
-    let scale = 1. / side_len as f32;
-
     'outer: for y in 0..side_len {
         for x in 0..side_len {
-            let idx = x + y * side_len;
+            let scale = 1. / side_len as f32;
+
+            let n = x + y * side_len;
+
             let [x, y] = [x, y].map(|v| v as f32 / side_len as f32);
 
-            if idx >= set.len() {
-                break 'outer;
-            }
+            let idx = set
+                .iter()
+                .enumerate()
+                .filter(|(_, p)| **p)
+                .skip(n)
+                .find_map(|(i, p)| p.then(|| i));
+
+            let idx = match idx {
+                None => break 'outer,
+                Some(i) => i,
+            };
 
             if set[idx] {
                 gb.push_tf(pos_scale2d(x, y, scale));
