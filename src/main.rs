@@ -26,6 +26,8 @@ struct CubeDemo {
 
     solver: Solver,
 
+    control: ControlFlow,
+
     frame: usize,
 }
 
@@ -100,9 +102,16 @@ impl App for CubeDemo {
         let mut grid = init_grid(w, w, &tiles);
         draw_tile_grid(&mut line_gb, &grid, &tiles);
 
-        let tile = &mut grid[(3, 3)];
-        tile.iter_mut().for_each(|b| *b = false);
-        tile[4] = true;
+        let mut rng = Rng::new();
+        for _ in 0..20 {
+            let x = rng.gen() as usize % grid.width();
+            let y = rng.gen() as usize % grid.height();
+            let idx = rng.gen() as usize % tiles.len();
+
+            let tile = &mut grid[(x, y)];
+            tile.iter_mut().for_each(|b| *b = false);
+            tile[idx] = true;
+        }
 
         let solver = Solver::from_grid(tiles, grid);
 
@@ -129,6 +138,8 @@ impl App for CubeDemo {
             tri_verts,
             tri_indices,
             tri_gb,
+
+            control: ControlFlow::Continue,
             
             solver,
 
@@ -137,9 +148,10 @@ impl App for CubeDemo {
     }
 
     fn frame(&mut self, ctx: &mut Context, _: &mut Platform) -> Result<Vec<DrawCmd>> {
-        if self.frame % 1 == 0 {
-            if self.solver.step() != ControlFlow::Continue {
-                panic!()
+        if self.frame % 1 == 0 && self.control == ControlFlow::Continue {
+            self.control = self.solver.step();
+            if self.control != ControlFlow::Continue {
+                dbg!(self.control);
             }
 
             self.line_gb.clear();
@@ -157,9 +169,9 @@ impl App for CubeDemo {
         Ok(vec![
             //DrawCmd::new(self.tri_verts).indices(self.tri_indices),
             DrawCmd::new(self.line_verts)
-                .indices(self.line_indices)
-                .shader(self.line_shader)
-                .limit(self.line_gb.indices.len() as u32),
+            .indices(self.line_indices)
+            .shader(self.line_shader)
+            .limit(self.line_gb.indices.len() as u32),
         ])
     }
 
@@ -188,20 +200,20 @@ fn cons_shape(f: fn(&mut ShapeBuilder)) -> ShapeBuilder {
 }
 
 /**
-```txt
-+--> +X
-|
-V
-+Y
+  ```txt
+  +--> +X
+  |
+  V
+  +Y
 
-+------+
-| c____e
-| | d__f
-| | |  |
-+-a b--+
+  +------+
+  | c____e
+  | | d__f
+  | | |  |
+  +-a b--+
   <-> PATH_WIDTH
-```
-*/
+  ```
+  */
 fn path_right(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -214,20 +226,20 @@ fn path_right(gb: &mut ShapeBuilder) {
 }
 
 /**
-```txt
-+--> +X
-|
-V
-+Y
+  ```txt
+  +--> +X
+  |
+  V
+  +Y
 
-+-c  d-+
-| |  | |
-| |  | |
-| |  | |
-+-a  b-+
+  +-c  d-+
+  | |  | |
+  | |  | |
+  | |  | |
+  +-a  b-+
   <-> PATH_WIDTH
-```
-*/
+  ```
+  */
 fn path_straight(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -238,20 +250,20 @@ fn path_straight(gb: &mut ShapeBuilder) {
 }
 
 /**
-```txt
-+--> +X
-|
-V
-+Y
+  ```txt
+  +--> +X
+  |
+  V
+  +Y
 
-+-c  d-+
-e-i  j-g
+  +-c  d-+
+  e-i  j-g
 
-f-k  l-h
-+-a  b-+
+  f-k  l-h
+  +-a  b-+
   <-> PATH_WIDTH
-```
-*/
+  ```
+  */
 fn path_4way(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -297,8 +309,8 @@ pub fn draw_tile_grid(gb: &mut ShapeBuilder, grid: &Array2D<TileSet>, tiles: &[T
             let [x, y] = [x, y].map(|v| v as f32 / maxdim as f32);
 
             gb.push_tf(Similarity3::from_isometry(
-                Isometry3::translation(x, y, 0.),
-                1. / maxdim as f32,
+                    Isometry3::translation(x, y, 0.),
+                    1. / maxdim as f32,
             ));
 
             draw_tile(gb, set, tiles);

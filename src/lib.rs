@@ -149,7 +149,7 @@ pub struct Solver {
     /// Grid of tile sets. Invalid if all false.
     grid: Array2D<TileSet>,
     /// Tile coordinates to be updated next, if any
-    dirty: HashSet<(usize, usize)>,
+    dirty: Vec<(usize, usize)>,
     /// Random number generator
     rng: Rng,
 }
@@ -166,7 +166,7 @@ impl Solver {
             rng: Rng::new(),
             tiles,
             grid,
-            dirty: HashSet::new(),
+            dirty: Vec::new(),
         }
     }
 
@@ -189,8 +189,8 @@ impl Solver {
     fn step_dirty(&mut self) -> ControlFlow {
         // Determine which tile set to update
         // Unwrap is okay because we are only called from step(); array length is checked there
-        let pos = self.dirty.iter().next().copied().unwrap();
-        self.dirty.remove(&pos);
+        let idx = self.rng.gen() as usize % self.dirty.len();
+        let pos = self.dirty.remove(idx);
 
         // Create a new tile set
         let mut new_tile_set = self.grid[pos].clone();
@@ -220,7 +220,7 @@ impl Solver {
             for neigh in neighborhood {
                 if let Some(neigh) = neigh {
                     dbg!(neigh);
-                    self.dirty.insert(neigh);
+                    self.dirty.push(neigh);
                 }
             }
             self.grid[pos] = new_tile_set;
@@ -251,8 +251,7 @@ impl Solver {
         }
 
         if let Some(lowest) = choose(&mut self.rng, &lowest) {
-            dbg!(lowest);
-            self.dirty.insert(*lowest);
+            self.dirty.push(*lowest);
             ControlFlow::Continue
         } else {
             ControlFlow::Finish
