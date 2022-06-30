@@ -294,11 +294,9 @@ pub fn draw_tile(gb: &mut ShapeBuilder, set: &TileSet, tiles: &[Tile]) {
                 Some(i) => i,
             };
 
-            if set[idx] {
-                gb.push_tf(pos_scale2d(x, y, scale));
-                gb.append(&tiles[idx].art);
-                gb.pop_tf();
-            }
+            gb.push_tf(pos_scale2d(x, y, scale));
+            gb.append(&tiles[idx].art);
+            gb.pop_tf();
         }
     }
 }
