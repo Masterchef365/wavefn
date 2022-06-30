@@ -51,7 +51,7 @@ pub fn apply_symmetry(shape: &Shape, sym: Symmetry) -> Vec<Shape> {
                 shape.clone(),
                 Shape {
                     art: rot_shapeb(&shape.art, FRAC_PI_2),
-                    conn: rot_conn_cw_90(shape.conn),
+                    conn: rot_conn_ccw_90(shape.conn),
                 },
             ]
         }
@@ -60,23 +60,23 @@ pub fn apply_symmetry(shape: &Shape, sym: Symmetry) -> Vec<Shape> {
                 shape.clone(),
                 Shape {
                     art: rot_shapeb(&shape.art, FRAC_PI_2),
-                    conn: rot_conn_cw_90(shape.conn),
+                    conn: rot_conn_ccw_90(shape.conn),
                 },
                 Shape {
                     art: rot_shapeb(&shape.art, FRAC_PI_2 * 2.),
-                    conn: rot_conn_cw_90(rot_conn_cw_90(shape.conn)),
+                    conn: rot_conn_ccw_90(rot_conn_ccw_90(shape.conn)),
                 },
                 Shape {
                     art: rot_shapeb(&shape.art, FRAC_PI_2 * 3.),
-                    conn: rot_conn_cw_90(rot_conn_cw_90(rot_conn_cw_90(shape.conn))),
+                    conn: rot_conn_ccw_90(rot_conn_ccw_90(rot_conn_ccw_90(shape.conn))),
                 },
             ]
         }
     }
 }
 
-fn rot_conn_cw_90([a, b, c, d]: [u32; 4]) -> [u32; 4] {
-    [d, a, b, c]
+fn rot_conn_ccw_90([a, b, c, d]: [u32; 4]) -> [u32; 4] {
+    [b, c, d, a]
 }
 
 pub fn rot_shapeb(art: &ShapeBuilder, angle: f32) -> ShapeBuilder {
@@ -178,6 +178,11 @@ impl Solver {
         &self.tiles
     }
 
+    pub fn dirty(&self) -> &[(usize, usize)] {
+        &self.dirty
+    }
+
+
     pub fn step(&mut self) -> ControlFlow {
         if self.dirty.is_empty() {
             self.step_random()
@@ -211,7 +216,8 @@ impl Solver {
 
         // Early exit if contradiction
         if new_tile_set.iter().all(|f| !f) {
-            return ControlFlow::Contradiction;
+            self.dirty.push(pos);
+            return ControlFlow::Continue;
         }
 
         // Determine if we made a change...
@@ -219,7 +225,6 @@ impl Solver {
             // ... and if so, mark neighbors as dirty:
             for neigh in neighborhood {
                 if let Some(neigh) = neigh {
-                    dbg!(neigh);
                     self.dirty.push(neigh);
                 }
             }

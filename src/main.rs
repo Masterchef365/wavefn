@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use idek::{prelude::*, IndexBuffer};
 use idek_basics::{
     idek::{
@@ -7,7 +9,8 @@ use idek_basics::{
     Array2D, ShapeBuilder,
 };
 use wavefn::{
-    apply_symmetry, compile_tiles, init_grid, pcg::Rng, Shape, Solver, Symmetry, Tile, TileSet, ControlFlow,
+    apply_symmetry, compile_tiles, init_grid, pcg::Rng, ControlFlow, Shape, Solver, Symmetry, Tile,
+    TileSet,
 };
 
 fn main() -> Result<()> {
@@ -41,24 +44,6 @@ impl App for CubeDemo {
 
         let mut shapes = vec![];
 
-        /*
-        shapes.push(Shape {
-            art: cons_shape(path_right),
-            conn: [CONN_PATH, CONN_PATH, CONN_WALL, CONN_WALL],
-            //weight: 1.,
-        });
-        shapes.push(Shape {
-            art: cons_shape(path_straight),
-            conn: [CONN_WALL, CONN_PATH, CONN_WALL, CONN_PATH],
-            //weight: 1.,
-        });
-        shapes.push(Shape {
-            art: cons_shape(path_4way),
-            conn: [CONN_PATH; 4],
-            //weight: 1.,
-        });
-        */
-
         // Right turn
         shapes.extend(apply_symmetry(
             &Shape {
@@ -80,11 +65,13 @@ impl App for CubeDemo {
         ));
 
         // 4-way path
+        /*
         shapes.push(Shape {
             art: cons_shape(path_4way),
             conn: [CONN_PATH; 4],
             //weight: 1.,
         });
+        */
 
         let tiles = compile_tiles(&shapes);
 
@@ -100,10 +87,10 @@ impl App for CubeDemo {
 
         let w = 10;
         let mut grid = init_grid(w, w, &tiles);
-        draw_tile_grid(&mut line_gb, &grid, &tiles);
+        draw_tile_grid(&mut line_gb, &grid, &tiles, Default::default());
 
         let mut rng = Rng::new();
-        for _ in 0..20 {
+        for _ in 0..4 {
             let x = rng.gen() as usize % grid.width();
             let y = rng.gen() as usize % grid.height();
             let idx = rng.gen() as usize % tiles.len();
@@ -140,7 +127,7 @@ impl App for CubeDemo {
             tri_gb,
 
             control: ControlFlow::Continue,
-            
+
             solver,
 
             frame: 0,
@@ -148,7 +135,10 @@ impl App for CubeDemo {
     }
 
     fn frame(&mut self, ctx: &mut Context, _: &mut Platform) -> Result<Vec<DrawCmd>> {
-        if self.frame % 1 == 0 && self.control == ControlFlow::Continue {
+        let frame = self.frame % 1 == 0;
+        let cont = self.control == ControlFlow::Continue;
+
+        if frame && cont {
             self.control = self.solver.step();
             if self.control != ControlFlow::Continue {
                 dbg!(self.control);
@@ -169,9 +159,9 @@ impl App for CubeDemo {
         Ok(vec![
             //DrawCmd::new(self.tri_verts).indices(self.tri_indices),
             DrawCmd::new(self.line_verts)
-            .indices(self.line_indices)
-            .shader(self.line_shader)
-            .limit(self.line_gb.indices.len() as u32),
+                .indices(self.line_indices)
+                .shader(self.line_shader)
+                .limit(self.line_gb.indices.len() as u32),
         ])
     }
 
@@ -200,20 +190,20 @@ fn cons_shape(f: fn(&mut ShapeBuilder)) -> ShapeBuilder {
 }
 
 /**
-  ```txt
-  +--> +X
-  |
-  V
-  +Y
+```txt
++--> +X
+|
+V
++Y
 
-  +------+
-  | c____e
-  | | d__f
-  | | |  |
-  +-a b--+
-  <-> PATH_WIDTH
-  ```
-  */
++------+
+| c____e
+| | d__f
+| | |  |
++-a b--+
+<-> PATH_WIDTH
+```
+*/
 fn path_right(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -226,20 +216,20 @@ fn path_right(gb: &mut ShapeBuilder) {
 }
 
 /**
-  ```txt
-  +--> +X
-  |
-  V
-  +Y
+```txt
++--> +X
+|
+V
++Y
 
-  +-c  d-+
-  | |  | |
-  | |  | |
-  | |  | |
-  +-a  b-+
-  <-> PATH_WIDTH
-  ```
-  */
++-c  d-+
+| |  | |
+| |  | |
+| |  | |
++-a  b-+
+<-> PATH_WIDTH
+```
+*/
 fn path_straight(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -250,20 +240,20 @@ fn path_straight(gb: &mut ShapeBuilder) {
 }
 
 /**
-  ```txt
-  +--> +X
-  |
-  V
-  +Y
+```txt
++--> +X
+|
+V
++Y
 
-  +-c  d-+
-  e-i  j-g
++-c  d-+
+e-i  j-g
 
-  f-k  l-h
-  +-a  b-+
-  <-> PATH_WIDTH
-  ```
-  */
+f-k  l-h
++-a  b-+
+<-> PATH_WIDTH
+```
+*/
 fn path_4way(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -300,17 +290,28 @@ pub fn ortho_cam_ctx(ctx: &mut Context, platform: &mut Platform) {
     }
 }
 
-pub fn draw_tile_grid(gb: &mut ShapeBuilder, grid: &Array2D<TileSet>, tiles: &[Tile]) {
+pub fn draw_tile_grid(
+    gb: &mut ShapeBuilder,
+    grid: &Array2D<TileSet>,
+    tiles: &[Tile],
+    dirty: HashSet<(usize, usize)>,
+) {
     for y in 0..grid.height() {
         for x in 0..grid.width() {
+            if dirty.contains(&(x, y)) {
+                gb.set_color([1., 0., 0.]);
+            } else {
+                gb.set_color([1.; 3]);
+            }
+
             let set = &grid[(x, y)];
 
             let maxdim = grid.width().max(grid.height());
             let [x, y] = [x, y].map(|v| v as f32 / maxdim as f32);
 
             gb.push_tf(Similarity3::from_isometry(
-                    Isometry3::translation(x, y, 0.),
-                    1. / maxdim as f32,
+                Isometry3::translation(x, y, 0.),
+                1. / maxdim as f32,
             ));
 
             draw_tile(gb, set, tiles);
@@ -380,5 +381,6 @@ pub fn draw_solver(gb: &mut ShapeBuilder, solver: &Solver) {
     draw_background_grid(gb, solver.grid().width(), solver.grid().height());
 
     gb.set_color([1.; 3]);
-    draw_tile_grid(gb, solver.grid(), solver.tiles());
+    let dirty: HashSet<(usize, usize)> = solver.dirty().iter().copied().collect();
+    draw_tile_grid(gb, solver.grid(), solver.tiles(), dirty);
 }
