@@ -73,9 +73,12 @@ impl App for CubeDemo {
         });
         */
 
+        for shape in &shapes {
+            println!("{:?}", shape.conn);
+        }
+
         let tiles = compile_tiles(&shapes);
 
-        /*
         for (idx, tile) in tiles.iter().enumerate() {
             println!("   {}:", idx);
             for (set_idx, set) in tile.rules.iter().enumerate() {
@@ -83,7 +86,6 @@ impl App for CubeDemo {
             }
             println!();
         }
-        */
 
         let w = 10;
         let mut grid = init_grid(w, w, &tiles);
@@ -135,7 +137,7 @@ impl App for CubeDemo {
     }
 
     fn frame(&mut self, ctx: &mut Context, _: &mut Platform) -> Result<Vec<DrawCmd>> {
-        let frame = self.frame % 1 == 0;
+        let frame = self.frame % 20 == 0;
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {

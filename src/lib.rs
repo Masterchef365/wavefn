@@ -51,7 +51,7 @@ pub fn apply_symmetry(shape: &Shape, sym: Symmetry) -> Vec<Shape> {
                 shape.clone(),
                 Shape {
                     art: rot_shapeb(&shape.art, FRAC_PI_2),
-                    conn: rot_conn_ccw_90(shape.conn),
+                    conn: rot_conn_cw_90(shape.conn),
                 },
             ]
         }
@@ -60,23 +60,24 @@ pub fn apply_symmetry(shape: &Shape, sym: Symmetry) -> Vec<Shape> {
                 shape.clone(),
                 Shape {
                     art: rot_shapeb(&shape.art, FRAC_PI_2),
-                    conn: rot_conn_ccw_90(shape.conn),
+                    conn: rot_conn_cw_90(shape.conn),
                 },
                 Shape {
                     art: rot_shapeb(&shape.art, FRAC_PI_2 * 2.),
-                    conn: rot_conn_ccw_90(rot_conn_ccw_90(shape.conn)),
+                    conn: rot_conn_cw_90(rot_conn_cw_90(shape.conn)),
                 },
                 Shape {
                     art: rot_shapeb(&shape.art, FRAC_PI_2 * 3.),
-                    conn: rot_conn_ccw_90(rot_conn_ccw_90(rot_conn_ccw_90(shape.conn))),
+                    conn: rot_conn_cw_90(rot_conn_cw_90(rot_conn_cw_90(shape.conn))),
                 },
             ]
         }
     }
 }
 
-fn rot_conn_ccw_90([a, b, c, d]: [u32; 4]) -> [u32; 4] {
-    [b, c, d, a]
+fn rot_conn_cw_90([a, b, c, d]: [u32; 4]) -> [u32; 4] {
+    //[b, c, d, a]
+    [d, a, b, c]
 }
 
 pub fn rot_shapeb(art: &ShapeBuilder, angle: f32) -> ShapeBuilder {
@@ -182,7 +183,6 @@ impl Solver {
         &self.dirty
     }
 
-
     pub fn step(&mut self) -> ControlFlow {
         if self.dirty.is_empty() {
             self.step_random()
@@ -201,6 +201,27 @@ impl Solver {
         let mut new_tile_set = self.grid[pos].clone();
         let neighborhood = neighbor_coords(&self.grid, pos);
 
+        // For each tile this cell could be...
+        for idx in 0..self.tiles.len() {
+            if !new_tile_set[idx] {
+                continue;
+            }
+
+            let mut present = true;
+
+            // Check for all sides whether it's possible to be this tile
+            for (side, neigh_pos) in neighborhood.into_iter().enumerate() {
+                if let Some(neigh) = neigh_pos.map(|p| &self.grid[p]) {
+                    present &= self.tiles[idx].rules[side]
+                        .iter()
+                        .zip(neigh)
+                        .any(|(t, n)| t & n);
+                }
+            }
+
+            new_tile_set[idx] = present;
+        }
+        /*
         // Determine for each neighbor...
         for (neigh_idx, neigh) in neighborhood.into_iter().enumerate() {
             if let Some(neigh) = neigh {
@@ -213,11 +234,11 @@ impl Solver {
                 }
             }
         }
+        */
 
         // Early exit if contradiction
         if new_tile_set.iter().all(|f| !f) {
-            self.dirty.push(pos);
-            return ControlFlow::Continue;
+            return ControlFlow::Contradiction;
         }
 
         // Determine if we made a change...
@@ -225,7 +246,9 @@ impl Solver {
             // ... and if so, mark neighbors as dirty:
             for neigh in neighborhood {
                 if let Some(neigh) = neigh {
-                    self.dirty.push(neigh);
+                    if count_tileset(&self.grid[neigh]) != 1 {
+                        self.dirty.push(neigh);
+                    }
                 }
             }
             self.grid[pos] = new_tile_set;
@@ -278,7 +301,7 @@ fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
 }
 
 fn neighbor_coords<T>(arr: &Array2D<T>, (x, y): (usize, usize)) -> [Option<(usize, usize)>; 4] {
-    [(-1, 0), (0, -1), (1, 0), (0, 1)]
+    [(1, 0), (0, 1), (-1, 0), (0, -1)]
         .map(|(dx, dy)| bnd_chk(x, dx, arr.width()).zip(bnd_chk(y, dy, arr.height())))
 }
 
