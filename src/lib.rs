@@ -128,6 +128,7 @@ pub fn compile_tiles(shapes: &[Shape]) -> Vec<Tile> {
 ///     * Sorted array of usize? (indices)
 pub type TileSet = Vec<bool>;
 
+#[derive(Clone)]
 pub struct Tile {
     /// Transformed art
     pub art: ShapeBuilder,
@@ -151,8 +152,6 @@ pub struct Solver {
     grid: Array2D<TileSet>,
     /// Tile coordinates to be updated next, if any
     dirty: Vec<(usize, usize)>,
-    /// Random number generator
-    rng: Rng,
 }
 
 pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Array2D<TileSet> {
@@ -164,7 +163,6 @@ pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Array2D<TileSet
 impl Solver {
     pub fn from_grid(tiles: Vec<Tile>, grid: Array2D<TileSet>) -> Self {
         Self {
-            rng: Rng::new(),
             tiles,
             grid,
             dirty: Vec::new(),
@@ -183,18 +181,18 @@ impl Solver {
         &self.dirty
     }
 
-    pub fn step(&mut self) -> ControlFlow {
+    pub fn step(&mut self, rng: &mut Rng) -> ControlFlow {
         if self.dirty.is_empty() {
-            self.step_random()
+            self.step_random(rng)
         } else {
-            self.step_dirty()
+            self.step_dirty(rng)
         }
     }
 
-    fn step_dirty(&mut self) -> ControlFlow {
+    fn step_dirty(&mut self, rng: &mut Rng) -> ControlFlow {
         // Determine which tile set to update
         // Unwrap is okay because we are only called from step(); array length is checked there
-        let idx = self.rng.gen() as usize % self.dirty.len();
+        let idx = rng.gen() as usize % self.dirty.len();
         let pos = self.dirty.remove(idx);
 
         // Create a new tile set
@@ -257,7 +255,7 @@ impl Solver {
         ControlFlow::Continue
     }
 
-    fn step_random(&mut self) -> ControlFlow {
+    fn step_random(&mut self, rng: &mut Rng) -> ControlFlow {
         //todo!("Shannon entropy random selection")
         let lowest_n = self
             .grid()
@@ -278,10 +276,10 @@ impl Solver {
             }
         }
 
-        if let Some(lowest) = choose(&mut self.rng, &lowest) {
+        if let Some(lowest) = choose(rng, &lowest) {
             // Remove a random part of the lowest
             let ones = self.grid[*lowest].iter().enumerate().filter_map(|(i, p)| p.then(|| i)).collect::<Vec<_>>();
-            let idx = ones[self.rng.gen() as usize % ones.len()];
+            let idx = ones[rng.gen() as usize % ones.len()];
             self.grid[*lowest][idx] = false;
 
             self.dirty.push(*lowest);
