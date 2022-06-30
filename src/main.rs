@@ -6,7 +6,9 @@ use idek_basics::{
     },
     Array2D, ShapeBuilder,
 };
-use wavefn::{apply_symmetry, compile_tiles, Shape, Solver, Symmetry, Tile, TileSet};
+use wavefn::{
+    apply_symmetry, compile_tiles, init_grid, pcg::Rng, Shape, Solver, Symmetry, Tile, TileSet,
+};
 
 fn main() -> Result<()> {
     launch::<_, CubeDemo>(Settings::default().vr_if_any_args())
@@ -90,14 +92,20 @@ impl App for CubeDemo {
         }
         */
 
-        let w = 20;
-        let solver = Solver::new(tiles, w, w);
+        let mut rng = Rng::new();
 
-        line_gb.set_color([1., 0.2, 0.2]);
-        draw_background_grid(&mut line_gb, solver.grid().width(), solver.grid().height());
+        let w = 10;
+        let mut grid = init_grid(w, w, &tiles);
 
-        line_gb.set_color([1.; 3]);
-        draw_tile_grid(&mut line_gb, solver.grid(), solver.tiles());
+        let tile = &mut grid[(3, 3)];
+        tile.iter_mut().for_each(|b| *b = false);
+        tile[4] = true;
+
+        let mut solver = Solver::from_grid(tiles, grid);
+
+        //solver.step();
+
+        draw_solver(&mut line_gb, &solver);
 
         path_right(&mut tri_gb);
 
@@ -335,4 +343,12 @@ pub fn draw_background_grid(gb: &mut ShapeBuilder, width: usize, height: usize) 
 
 pub fn ceil_pow2(v: usize) -> usize {
     (v as f32).sqrt().ceil() as usize
+}
+
+pub fn draw_solver(gb: &mut ShapeBuilder, solver: &Solver) {
+    gb.set_color([1., 0.2, 0.2]);
+    draw_background_grid(gb, solver.grid().width(), solver.grid().height());
+
+    gb.set_color([1.; 3]);
+    draw_tile_grid(gb, solver.grid(), solver.tiles());
 }

@@ -39,4 +39,3 @@ impl Rng {
         Self::rotr32(Self::u64_to_u32(x >> 27), Self::u64_to_u32(count))
     }
 }
-

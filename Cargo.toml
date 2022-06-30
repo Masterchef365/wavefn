@@ -8,4 +8,3 @@ edition = "2021"
 [dependencies]
 idek_basics = { path = "../idek_basics" }
 #idek_basics = { git = "https://github.com/Masterchef365/idek-basics.git", rev = "6a3e9c7" }
-rand = "0.8"

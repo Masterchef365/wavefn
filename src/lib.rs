@@ -3,7 +3,7 @@ use idek_basics::{
     Array2D, ShapeBuilder,
 };
 use std::{collections::HashSet, f32::consts::FRAC_PI_2};
-mod pcg;
+pub mod pcg;
 
 /*
 Connection directions are clockwise, like so:
@@ -150,29 +150,13 @@ pub struct Solver {
     dirty: HashSet<(usize, usize)>,
 }
 
+pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Array2D<TileSet> {
+    let init_tile_set = vec![true; tiles.len()];
+    let data = vec![init_tile_set; width * height];
+    Array2D::from_array(width, data)
+}
+
 impl Solver {
-    pub fn new(tiles: Vec<Tile>, width: usize, height: usize) -> Self {
-        let init_tile_set = vec![true; tiles.len()];
-        let grid = Array2D::from_array(width, vec![init_tile_set; width * height]);
-
-        /*
-        let mut grid = grid;
-        let tile = &mut grid[(3, 5)];
-        tile.iter_mut().for_each(|b| *b = false);
-        tile[0] = true;
-        tile[3] = true;
-
-        let mut rng = pcg::Rng::new();
-        for tile in grid.data_mut() {
-            tile.iter_mut().for_each(|b| {
-                *b = rng.gen() & 1 == 0;
-            })
-        }
-        */
-
-        Self::from_grid(tiles, grid)
-    }
-
     pub fn from_grid(tiles: Vec<Tile>, grid: Array2D<TileSet>) -> Self {
         Self {
             tiles,
