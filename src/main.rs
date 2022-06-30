@@ -134,7 +134,7 @@ impl App for CubeDemo {
     }
 
     fn frame(&mut self, ctx: &mut Context, _: &mut Platform) -> Result<Vec<DrawCmd>> {
-        let frame = self.frame % 10 == 0;
+        let frame = self.frame % 1 == 0;
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {

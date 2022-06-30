@@ -219,20 +219,6 @@ impl Solver {
 
             new_tile_set[idx] = present;
         }
-        /*
-        // Determine for each neighbor...
-        for (neigh_idx, neigh) in neighborhood.into_iter().enumerate() {
-            if let Some(neigh) = neigh {
-                // ... For each possible tile that neighbor could be...
-                for (idx, cond) in self.grid[neigh].iter().enumerate() {
-                    if *cond {
-                        // ... Whether or not that tile intersects with our set
-                        new_tile_set[idx] &= self.tiles[idx].rules[neigh_idx][idx];
-                    }
-                }
-            }
-        }
-        */
 
         // Early exit if contradiction
         if new_tile_set.iter().all(|f| !f) {
@@ -282,9 +268,21 @@ impl Solver {
 
         if let Some(lowest) = choose(rng, &lowest) {
             // Remove a random part of the lowest
-            let ones = self.grid[*lowest].iter().enumerate().filter_map(|(i, p)| p.then(|| i)).collect::<Vec<_>>();
+            let ones = self.grid[*lowest]
+                .iter()
+                .enumerate()
+                .filter_map(|(i, p)| p.then(|| i))
+                .collect::<Vec<_>>();
             let idx = ones[rng.gen() as usize % ones.len()];
             self.grid[*lowest][idx] = false;
+
+            for neigh in neighbor_coords(&self.grid, *lowest) {
+                if let Some(neigh) = neigh {
+                    if count_tileset(&self.grid[neigh]) != 1 {
+                        self.dirty.push(neigh);
+                    }
+                }
+            }
 
             self.dirty.push(*lowest);
             ControlFlow::Continue
