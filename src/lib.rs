@@ -279,6 +279,11 @@ impl Solver {
         }
 
         if let Some(lowest) = choose(&mut self.rng, &lowest) {
+            // Remove a random part of the lowest
+            let ones = self.grid[*lowest].iter().enumerate().filter_map(|(i, p)| p.then(|| i)).collect::<Vec<_>>();
+            let idx = ones[self.rng.gen() as usize % ones.len()];
+            self.grid[*lowest][idx] = false;
+
             self.dirty.push(*lowest);
             ControlFlow::Continue
         } else {

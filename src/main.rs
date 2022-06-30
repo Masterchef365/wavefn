@@ -92,7 +92,7 @@ impl App for CubeDemo {
         draw_tile_grid(&mut line_gb, &grid, &tiles, Default::default());
 
         let mut rng = Rng::new();
-        for _ in 0..4 {
+        for _ in 0..1 {
             let x = rng.gen() as usize % grid.width();
             let y = rng.gen() as usize % grid.height();
             let idx = rng.gen() as usize % tiles.len();
@@ -137,7 +137,7 @@ impl App for CubeDemo {
     }
 
     fn frame(&mut self, ctx: &mut Context, _: &mut Platform) -> Result<Vec<DrawCmd>> {
-        let frame = self.frame % 20 == 0;
+        let frame = self.frame % 1 == 0;
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
