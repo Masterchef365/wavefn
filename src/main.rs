@@ -272,8 +272,6 @@ pub fn draw_tile_grid(gb: &mut OffsetBuilder, grid: &Array2D<TileSet>, tiles: &[
             draw_tile(gb, set, tiles);
 
             gb.pop_tf();
-
-            //tiles[(x, y)]
         }
     }
 }
@@ -282,7 +280,26 @@ pub fn draw_tile(gb: &mut OffsetBuilder, set: &TileSet, tiles: &[Tile]) {
     let total = set.iter().filter(|p| **p).count();
     let side_len = ceil_pow2(total);
 
-    gb.append(&tiles[0].art);
+    'outer: for y in 0..side_len {
+        for x in 0..side_len {
+            let idx = x + y * side_len;
+            let [x, y] = [x, y].map(|v| v as f32 / side_len as f32);
+
+            if idx >= set.len() {
+                break 'outer;
+            }
+
+            if set[idx] {
+                gb.push_tf(Similarity3::from_isometry(
+                        Isometry3::translation(x, y, 0.),
+                        1. / side_len as f32,
+                ));
+                gb.append(&tiles[idx].art);
+                gb.pop_tf();
+            }
+        }
+    }
+
 }
 
 pub fn ceil_pow2(v: usize) -> usize {
