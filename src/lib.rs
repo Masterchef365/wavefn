@@ -16,7 +16,7 @@ V
 
 use std::collections::HashSet;
 
-use idek_basics::{Array2D, OffsetBuilder};
+use idek_basics::{Array2D, ShapeBuilder};
 
 pub enum Symmetry {
     /// No transformation
@@ -32,7 +32,7 @@ pub enum Symmetry {
 }
 
 pub struct Shape {
-    pub art: OffsetBuilder,
+    pub art: ShapeBuilder,
     /// Each number corresponds to an interface type.
     pub conn: [u32; 4],
     // /// Weight relative to other shapes
@@ -67,7 +67,7 @@ pub type TileSet = Vec<bool>;
 
 pub struct Tile {
     /// Transformed art
-    pub art: OffsetBuilder,
+    pub art: ShapeBuilder,
     /// Sets of tiles which can be adjacent to this one
     pub rules: [TileSet; 4],
 }
