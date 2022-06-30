@@ -96,18 +96,15 @@ impl App for CubeDemo {
         }
         */
 
-        let mut rng = Rng::new();
-
         let w = 10;
         let mut grid = init_grid(w, w, &tiles);
+        draw_tile_grid(&mut line_gb, &grid, &tiles);
 
         let tile = &mut grid[(3, 3)];
         tile.iter_mut().for_each(|b| *b = false);
         tile[4] = true;
 
-        let mut solver = Solver::from_grid(tiles, grid);
-
-        draw_solver(&mut line_gb, &solver);
+        let solver = Solver::from_grid(tiles, grid);
 
         path_right(&mut tri_gb);
 
@@ -161,7 +158,8 @@ impl App for CubeDemo {
             //DrawCmd::new(self.tri_verts).indices(self.tri_indices),
             DrawCmd::new(self.line_verts)
                 .indices(self.line_indices)
-                .shader(self.line_shader),
+                .shader(self.line_shader)
+                .limit(self.line_gb.indices.len() as u32),
         ])
     }
 
