@@ -83,7 +83,10 @@ impl App for CubeDemo {
         let tiles = compile_tiles(&shapes);
         let solver = Solver::new(tiles, 10, 10);
 
+        line_gb.set_color([1., 0.2, 0.2]);
         draw_background_grid(&mut line_gb, solver.grid().width(), solver.grid().height());
+
+        line_gb.set_color([1.; 3]);
         draw_tile_grid(&mut line_gb, solver.grid(), solver.tiles());
 
         //path_right(&mut line_gb, [1.; 3]);
