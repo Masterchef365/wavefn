@@ -79,7 +79,19 @@ impl App for CubeDemo {
         });
 
         let tiles = compile_tiles(&shapes);
-        let solver = Solver::new(tiles, 10, 10);
+
+        /*
+        for (idx, tile) in tiles.iter().enumerate() {
+            println!("   {}:", idx);
+            for (set_idx, set) in tile.rules.iter().enumerate() {
+                println!("    {}: {:?}", set_idx, set);
+            }
+            println!();
+        }
+        */
+
+        let w = 20;
+        let solver = Solver::new(tiles, w, w);
 
         line_gb.set_color([1., 0.2, 0.2]);
         draw_background_grid(&mut line_gb, solver.grid().width(), solver.grid().height());

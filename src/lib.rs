@@ -102,10 +102,18 @@ pub fn compile_tiles(shapes: &[Shape]) -> Vec<Tile> {
     let mut tiles = vec![];
 
     for shape in shapes {
-        tiles.push(Tile {
-            art: shape.art.clone(),
-            rules: [(); 4].map(|_| Vec::new()),
+        let art = shape.art.clone();
+
+        // Check our connection points against possible partners
+        let pairs = [(0, 2), (1, 3), (2, 0), (3, 1)];
+        let rules: [TileSet; 4] = pairs.map(|(side, partner_side)| {
+            shapes
+                .iter()
+                .map(|partner| shape.conn[side] == partner.conn[partner_side])
+                .collect()
         });
+
+        tiles.push(Tile { art, rules });
     }
 
     tiles
@@ -147,17 +155,20 @@ impl Solver {
         let init_tile_set = vec![true; tiles.len()];
         let grid = Array2D::from_array(width, vec![init_tile_set; width * height]);
 
+        /*
         let mut grid = grid;
         let tile = &mut grid[(3, 5)];
         tile.iter_mut().for_each(|b| *b = false);
+        tile[0] = true;
+        tile[3] = true;
 
         let mut rng = pcg::Rng::new();
-
         for tile in grid.data_mut() {
             tile.iter_mut().for_each(|b| {
                 *b = rng.gen() & 1 == 0;
             })
         }
+        */
 
         Self::from_grid(tiles, grid)
     }
