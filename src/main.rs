@@ -33,6 +33,7 @@ impl App for CubeDemo {
 
         let mut shapes = vec![];
 
+        /*
         shapes.push(Shape {
             art: cons_shape(path_right),
             conn: [CONN_PATH, CONN_PATH, CONN_WALL, CONN_WALL],
@@ -48,11 +49,12 @@ impl App for CubeDemo {
             conn: [CONN_PATH; 4],
             //weight: 1.,
         });
-        /*
+        */
+
         // Right turn
         shapes.extend(apply_symmetry(
             &Shape {
-                art: white_gb(path_right),
+                art: cons_shape(path_right),
                 conn: [CONN_PATH, CONN_PATH, CONN_WALL, CONN_WALL],
                 //weight: 1.,
             },
@@ -62,7 +64,7 @@ impl App for CubeDemo {
         // Straight path
         shapes.extend(apply_symmetry(
             &Shape {
-                art: white_gb(path_straight),
+                art: cons_shape(path_straight),
                 conn: [CONN_WALL, CONN_PATH, CONN_WALL, CONN_PATH],
                 //weight: 1.,
             },
@@ -70,15 +72,11 @@ impl App for CubeDemo {
         ));
 
         // 4-way path
-        shapes.extend(apply_symmetry(
-            &Shape {
-                art: white_gb(path_4way),
-                conn: [CONN_PATH; 4],
-                //weight: 1.,
-            },
-            Symmetry::Identity,
-        ));
-        */
+        shapes.push(Shape {
+            art: cons_shape(path_4way),
+            conn: [CONN_PATH; 4],
+            //weight: 1.,
+        });
 
         let tiles = compile_tiles(&shapes);
         let solver = Solver::new(tiles, 10, 10);
@@ -89,9 +87,6 @@ impl App for CubeDemo {
         line_gb.set_color([1.; 3]);
         draw_tile_grid(&mut line_gb, solver.grid(), solver.tiles());
 
-        //path_right(&mut line_gb, [1.; 3]);
-        //path_straight(&mut line_gb, [1.; 3]);
-        //path_4way(&mut line_gb, [1.; 3]);
         path_right(&mut tri_gb);
 
         let line_verts = ctx.vertices(&line_gb.vertices, true)?;
@@ -220,7 +215,6 @@ f-k  l-h
 ```
 */
 fn path_4way(gb: &mut ShapeBuilder) {
-
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
     let c = gb.push_vertex([PATH_MIN, 0., 0.]);
@@ -298,14 +292,10 @@ pub fn draw_tile(gb: &mut ShapeBuilder, set: &TileSet, tiles: &[Tile]) {
             }
         }
     }
-
 }
 
 fn pos_scale2d(x: f32, y: f32, scale: f32) -> Similarity3<f32> {
-    Similarity3::from_isometry(
-        Isometry3::translation(x, y, 0.),
-        scale,
-    )
+    Similarity3::from_isometry(Isometry3::translation(x, y, 0.), scale)
 }
 
 pub fn draw_background_grid(gb: &mut ShapeBuilder, width: usize, height: usize) {

@@ -1,3 +1,9 @@
+use idek_basics::{
+    idek::nalgebra::{Isometry3, Similarity3, Vector3},
+    Array2D, ShapeBuilder,
+};
+use std::{collections::HashSet, f32::consts::FRAC_PI_2};
+
 /*
 Connection directions are clockwise, like so:
       ^
@@ -14,13 +20,9 @@ V
 +Y
 */
 
-use std::collections::HashSet;
-
-use idek_basics::{Array2D, ShapeBuilder};
-
 pub enum Symmetry {
-    /// No transformation
-    Identity,
+    // /// No transformation
+    // Identity,
     /// One 45-degree tf
     Rot2,
     /// Rotate 4 ways 45 degrees in the plane
@@ -31,6 +33,7 @@ pub enum Symmetry {
     // MirrorY,
 }
 
+#[derive(Clone)]
 pub struct Shape {
     pub art: ShapeBuilder,
     /// Each number corresponds to an interface type.
@@ -40,7 +43,56 @@ pub struct Shape {
 }
 
 pub fn apply_symmetry(shape: &Shape, sym: Symmetry) -> Vec<Shape> {
-    todo!()
+    match sym {
+        Symmetry::Rot2 => {
+            vec![
+                shape.clone(),
+                Shape {
+                    art: rot_shapeb(&shape.art, FRAC_PI_2),
+                    conn: rot_conn_cw_90(shape.conn),
+                },
+            ]
+        }
+        Symmetry::Rot4 => {
+            vec![
+                shape.clone(),
+                Shape {
+                    art: rot_shapeb(&shape.art, FRAC_PI_2),
+                    conn: rot_conn_cw_90(shape.conn),
+                },
+                Shape {
+                    art: rot_shapeb(&shape.art, FRAC_PI_2 * 2.),
+                    conn: rot_conn_cw_90(rot_conn_cw_90(shape.conn)),
+                },
+                Shape {
+                    art: rot_shapeb(&shape.art, FRAC_PI_2 * 3.),
+                    conn: rot_conn_cw_90(rot_conn_cw_90(rot_conn_cw_90(shape.conn))),
+                },
+            ]
+        }
+    }
+}
+
+fn rot_conn_cw_90([a, b, c, d]: [u32; 4]) -> [u32; 4] {
+    [d, a, b, c]
+}
+
+pub fn rot_shapeb(art: &ShapeBuilder, angle: f32) -> ShapeBuilder {
+    let mut s = ShapeBuilder::new();
+    let tf = Similarity3::from_isometry(Isometry3::translation(0.5, 0.5, 0.), 1.)
+        * Similarity3::from_isometry(Isometry3::rotation(Vector3::new(0., 0., angle)), 1.)
+        * Similarity3::from_isometry(Isometry3::translation(-0.5, -0.5, 0.), 1.);
+
+    s.push_tf(tf);
+    s.append(art);
+    s
+}
+
+fn invert_indices(i: &[u32]) -> Vec<u32> {
+    i.chunks_exact(3)
+        .map(|c| [c[2], c[1], c[0]])
+        .flatten()
+        .collect()
 }
 
 /// Convert a set of shapes into a set of tiles useable by the solver as rules
