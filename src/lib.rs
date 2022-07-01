@@ -6,6 +6,8 @@ use pcg::Rng;
 use std::{collections::HashSet, f32::consts::FRAC_PI_2};
 pub mod pcg;
 
+pub type Coord = (usize, usize);
+
 pub type Grid = Array2D<TileSet>;
 
 /*
@@ -153,7 +155,7 @@ pub struct Solver {
     /// Grid of tile sets. Invalid if all false.
     grid: Grid,
     /// Tile coordinates to be updated next, if any
-    dirty: Vec<(usize, usize)>,
+    dirty: Vec<Coord>,
 }
 
 pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Grid {
@@ -179,7 +181,7 @@ impl Solver {
         &self.tiles
     }
 
-    pub fn dirty(&self) -> &[(usize, usize)] {
+    pub fn dirty(&self) -> &[Coord] {
         &self.dirty
     }
 
@@ -187,11 +189,11 @@ impl Solver {
         if self.dirty.is_empty() {
             self.step_random(rng)
         } else {
-            self.step_dirty(rng)
+            self.step_dirty()
         }
     }
 
-    fn step_dirty(&mut self, rng: &mut Rng) -> ControlFlow {
+    fn step_dirty_part(&mut self) -> ControlFlow {
         let mut lowest = None;
         let mut lowest_entropy = usize::MAX;
         for (idx, pos) in self.dirty.iter().enumerate() {
@@ -234,10 +236,10 @@ impl Solver {
 
         // Early exit if contradiction
         if new_tile_set.iter().all(|f| !f) {
+            self.grid[pos] = vec![true; self.tiles.len()];
             return ControlFlow::Contradiction;
         }
 
-        // Determine if we made a change...
         if new_tile_set != self.grid[pos] {
             self.dirty.push(pos);
             // ... and if so, mark neighbors as dirty:
@@ -252,6 +254,15 @@ impl Solver {
         }
 
         ControlFlow::Continue
+
+    }
+
+    fn step_dirty(&mut self) -> ControlFlow {
+        let mut ctrl = self.step_dirty_part();
+        if ctrl == ControlFlow::Contradiction {
+            ctrl = self.step_dirty_part();
+        }
+        ctrl
     }
 
     fn step_random(&mut self, rng: &mut Rng) -> ControlFlow {
@@ -308,7 +319,7 @@ impl Solver {
     }
 }
 
-fn tile_entropy(grid: &Grid, pos: (usize, usize)) -> usize {
+fn tile_entropy(grid: &Grid, pos: Coord) -> usize {
     let mut n = count_tileset(&grid[pos]);
 
     for neigh in neighbor_coords(grid, pos) {
@@ -335,7 +346,7 @@ fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
     }
 }
 
-fn neighbor_coords<T>(arr: &Array2D<T>, (x, y): (usize, usize)) -> [Option<(usize, usize)>; 4] {
+fn neighbor_coords<T>(arr: &Array2D<T>, (x, y): Coord) -> [Option<Coord>; 4] {
     [(1, 0), (0, 1), (-1, 0), (0, -1)]
         .map(|(dx, dy)| bnd_chk(x, dx, arr.width()).zip(bnd_chk(y, dy, arr.height())))
 }
