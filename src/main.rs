@@ -59,11 +59,13 @@ impl App for CubeDemo {
         ));
 
         // 4-way path
+        /*
         shapes.push(Shape {
             art: cons_shape(path_4way),
             conn: [CONN_PATH; 4],
             //weight: 1.,
         });
+        */
 
         // Straight path
         shapes.extend(apply_symmetry(
@@ -145,19 +147,17 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            //for _ in 0..3000 {
+            for _ in 0..300 {
                 self.control = self.solver.step(&mut self.rng);
                 if self.control == ControlFlow::Contradiction {
                     //dbg!(self.control);
                     self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
                     self.control = ControlFlow::Continue;
                 }
-                /*
                 if self.control == ControlFlow::Finish {
                     break;
                 }
             }
-                */
 
             self.line_gb.clear();
 
@@ -188,10 +188,10 @@ impl App for CubeDemo {
 }
 
 fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
-    let w = 10;
+    let w = 30;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..4 {
+    for _ in 0..40 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
         let idx = rng.gen() as usize % tiles.len();
