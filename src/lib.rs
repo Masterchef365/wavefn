@@ -192,10 +192,20 @@ impl Solver {
     }
 
     fn step_dirty(&mut self, rng: &mut Rng) -> ControlFlow {
-        // Determine which tile set to update
-        // Unwrap is okay because we are only called from step(); array length is checked there
-        let idx = rng.gen() as usize % self.dirty.len();
-        let pos = self.dirty.remove(idx);
+        let mut lowest = None;
+        let mut lowest_entropy = usize::MAX;
+        for (idx, pos) in self.dirty.iter().enumerate() {
+            let entropy = tile_entropy(&self.grid, *pos);
+            if entropy < lowest_entropy {
+                lowest = Some(idx);
+                lowest_entropy = entropy;
+            }
+        }
+
+        let pos = match lowest {
+            Some(idx) => self.dirty.remove(idx),
+            None => return ControlFlow::Continue,
+        };
 
         // Create a new tile set
         let mut new_tile_set = self.grid[pos].clone();
@@ -229,6 +239,7 @@ impl Solver {
 
         // Determine if we made a change...
         if new_tile_set != self.grid[pos] {
+            self.dirty.push(pos);
             // ... and if so, mark neighbors as dirty:
             for neigh in neighborhood {
                 if let Some(neigh) = neigh {
@@ -245,6 +256,8 @@ impl Solver {
 
     fn step_random(&mut self, rng: &mut Rng) -> ControlFlow {
         //todo!("Shannon entropy random selection")
+        // Find lowest entropy
+               // Find lowest entropy
         let mut lowest_n = usize::MAX;
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
@@ -257,6 +270,7 @@ impl Solver {
             }
         }
 
+        // Find all tiles with that entropy
         let mut lowest = vec![];
 
         for y in 0..self.grid.height() {
@@ -267,18 +281,18 @@ impl Solver {
                 }
             }
         }
-
-        if let Some(lowest) = choose(rng, &lowest) {
-            // Remove a random part of the lowest
-            let ones = self.grid[*lowest]
+ 
+        // Randomly select one and collapse it, marking its neighbors dirty
+        if let Some(&pos) = choose(rng, &lowest) {
+            let ones = self.grid[pos]
                 .iter()
                 .enumerate()
                 .filter_map(|(i, p)| p.then(|| i))
                 .collect::<Vec<_>>();
             let idx = ones[rng.gen() as usize % ones.len()];
-            self.grid[*lowest][idx] = false;
+            self.grid[pos][idx] = false;
 
-            for neigh in neighbor_coords(&self.grid, *lowest) {
+            for neigh in neighbor_coords(&self.grid, pos) {
                 if let Some(neigh) = neigh {
                     if count_tileset(&self.grid[neigh]) != 1 {
                         self.dirty.push(neigh);
@@ -286,7 +300,7 @@ impl Solver {
                 }
             }
 
-            self.dirty.push(*lowest);
+            self.dirty.push(pos);
             ControlFlow::Continue
         } else {
             ControlFlow::Finish
