@@ -10,7 +10,7 @@ use idek_basics::{
 };
 use wavefn::{
     apply_symmetry, compile_tiles, init_grid, pcg::Rng, ControlFlow, Shape, Solver, Symmetry, Tile,
-    TileSet,
+    TileSet, Grid, count_tileset,
 };
 
 fn main() -> Result<()> {
@@ -27,7 +27,9 @@ struct CubeDemo {
     tri_indices: IndexBuffer,
     tri_gb: ShapeBuilder,
 
+    grid: Grid,
     solver: Solver,
+
 
     control: ControlFlow,
 
@@ -56,6 +58,13 @@ impl App for CubeDemo {
             Symmetry::Rot4,
         ));
 
+        // 4-way path
+        shapes.push(Shape {
+            art: cons_shape(path_4way),
+            conn: [CONN_PATH; 4],
+            //weight: 1.,
+        });
+
         // Straight path
         shapes.extend(apply_symmetry(
             &Shape {
@@ -65,15 +74,6 @@ impl App for CubeDemo {
             },
             Symmetry::Rot2,
         ));
-
-        // 4-way path
-        /*
-        shapes.push(Shape {
-            art: cons_shape(path_4way),
-            conn: [CONN_PATH; 4],
-            //weight: 1.,
-        });
-        */
 
         /*
         for shape in &shapes {
@@ -95,7 +95,10 @@ impl App for CubeDemo {
 
         let mut rng = Rng::new();
 
-        let solver = new_solver(&mut rng, &tiles);
+        let grid = new_grid(&mut rng, &tiles);
+
+        let solver = Solver::from_grid(tiles.clone(), grid.clone());
+
         draw_tile_grid(&mut line_gb, &solver.grid(), &solver.tiles(), Default::default());
         draw_tile_grid(&mut line_gb, &solver.grid(), &solver.tiles(), Default::default());
 
@@ -127,6 +130,8 @@ impl App for CubeDemo {
 
             control: ControlFlow::Continue,
 
+            grid,
+
             solver,
 
             frame: 0,
@@ -138,12 +143,16 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            self.control = self.solver.step(&mut self.rng);
-            if self.control == ControlFlow::Contradiction {
-                dbg!(self.control);
-                let tiles = self.solver.tiles();
-                self.solver = new_solver(&mut self.rng, &tiles);
-                self.control = ControlFlow::Continue;
+            for _ in 0..3000 {
+                self.control = self.solver.step(&mut self.rng);
+                if self.control == ControlFlow::Contradiction {
+                    //dbg!(self.control);
+                    self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
+                    self.control = ControlFlow::Continue;
+                }
+                if self.control == ControlFlow::Finish {
+                    break;
+                }
             }
 
             self.line_gb.clear();
@@ -174,11 +183,11 @@ impl App for CubeDemo {
     }
 }
 
-fn new_solver(rng: &mut Rng, tiles: &[Tile]) -> Solver {
-    let w = 5;
+fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
+    let w = 20;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..4 {
+    for _ in 0..1 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
         let idx = rng.gen() as usize % tiles.len();
@@ -188,7 +197,7 @@ fn new_solver(rng: &mut Rng, tiles: &[Tile]) -> Solver {
         tile[idx] = true;
     }
 
-    Solver::from_grid(tiles.to_vec(), grid)
+    grid
 
 }
 
@@ -403,4 +412,11 @@ pub fn draw_solver(gb: &mut ShapeBuilder, solver: &Solver) {
     gb.set_color([1.; 3]);
     let dirty: HashSet<(usize, usize)> = solver.dirty().iter().copied().collect();
     draw_tile_grid(gb, solver.grid(), solver.tiles(), dirty);
+}
+
+pub fn grid_entropy(grid: &Grid) -> usize {
+    grid.data()
+        .iter()
+        .map(count_tileset)
+        .sum()
 }

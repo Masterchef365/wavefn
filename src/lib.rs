@@ -6,6 +6,8 @@ use pcg::Rng;
 use std::{collections::HashSet, f32::consts::FRAC_PI_2};
 pub mod pcg;
 
+pub type Grid = Array2D<TileSet>;
+
 /*
 Connection directions are clockwise, like so:
       ^
@@ -149,19 +151,19 @@ pub struct Solver {
     /// Tiles in use
     tiles: Vec<Tile>,
     /// Grid of tile sets. Invalid if all false.
-    grid: Array2D<TileSet>,
+    grid: Grid,
     /// Tile coordinates to be updated next, if any
     dirty: Vec<(usize, usize)>,
 }
 
-pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Array2D<TileSet> {
+pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Grid {
     let init_tile_set = vec![true; tiles.len()];
     let data = vec![init_tile_set; width * height];
     Array2D::from_array(width, data)
 }
 
 impl Solver {
-    pub fn from_grid(tiles: Vec<Tile>, grid: Array2D<TileSet>) -> Self {
+    pub fn from_grid(tiles: Vec<Tile>, grid: Grid) -> Self {
         Self {
             tiles,
             grid,
@@ -169,7 +171,7 @@ impl Solver {
         }
     }
 
-    pub fn grid(&self) -> &Array2D<TileSet> {
+    pub fn grid(&self) -> &Grid {
         &self.grid
     }
 
@@ -292,21 +294,22 @@ impl Solver {
     }
 }
 
-fn tile_entropy(grid: &Array2D<TileSet>, pos: (usize, usize)) -> usize {
+fn tile_entropy(grid: &Grid, pos: (usize, usize)) -> usize {
     let mut n = count_tileset(&grid[pos]);
 
     for neigh in neighbor_coords(grid, pos) {
         if let Some(neigh) = neigh {
             n += count_tileset(&grid[neigh]);
         } else {
-            n += grid[(0, 0)].len();
+            n += grid[pos].len();
         }
     }
     n
 }
 
-fn count_tileset(ts: &TileSet) -> usize {
-    ts.iter().filter(|p| **p).count()
+pub fn count_tileset(ts: &TileSet) -> usize {
+    //ts.iter().filter(|p| **p).count()
+    ts.iter().map(|t| *t as usize).sum()
 }
 
 fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
