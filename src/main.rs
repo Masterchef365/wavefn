@@ -9,8 +9,8 @@ use idek_basics::{
     Array2D, ShapeBuilder,
 };
 use wavefn::{
-    apply_symmetry, compile_tiles, init_grid, pcg::Rng, ControlFlow, Shape, Solver, Symmetry, Tile,
-    TileSet, Grid, count_tileset,
+    apply_symmetry, compile_tiles, count_tileset, init_grid, pcg::Rng, ControlFlow, Grid, Shape,
+    Solver, Symmetry, Tile, TileSet,
 };
 
 fn main() -> Result<()> {
@@ -29,7 +29,6 @@ struct CubeDemo {
 
     grid: Grid,
     solver: Solver,
-
 
     control: ControlFlow,
 
@@ -59,12 +58,14 @@ impl App for CubeDemo {
         ));
 
         // 3-way path
-        shapes.push(Shape {
-            art: cons_shape(path_3way),
-            conn: [CONN_PATH, CONN_PATH, CONN_WALL, CONN_PATH],
-            //weight: 1.,
-        });
-
+        shapes.extend(apply_symmetry(
+            &Shape {
+                art: cons_shape(path_3way),
+                conn: [CONN_PATH, CONN_PATH, CONN_WALL, CONN_PATH],
+                //weight: 1.,
+            },
+            Symmetry::Rot4,
+        ));
 
         // 4-way path
         shapes.push(Shape {
@@ -90,9 +91,8 @@ impl App for CubeDemo {
                 conn: [CONN_WALL, CONN_PATH, CONN_WALL, CONN_WALL],
                 //weight: 1.,
             },
-            Symmetry::Rot2,
+            Symmetry::Rot4,
         ));
-
 
         /*
         for shape in &shapes {
@@ -118,8 +118,18 @@ impl App for CubeDemo {
 
         let solver = Solver::from_grid(tiles.clone(), grid.clone());
 
-        draw_tile_grid(&mut line_gb, &solver.grid(), &solver.tiles(), Default::default());
-        draw_tile_grid(&mut line_gb, &solver.grid(), &solver.tiles(), Default::default());
+        draw_tile_grid(
+            &mut line_gb,
+            &solver.grid(),
+            &solver.tiles(),
+            Default::default(),
+        );
+        draw_tile_grid(
+            &mut line_gb,
+            &solver.grid(),
+            &solver.tiles(),
+            Default::default(),
+        );
 
         path_right(&mut tri_gb);
 
@@ -165,13 +175,13 @@ impl App for CubeDemo {
 
         if frame && cont {
             //for _ in 0..300 {
-                self.control = self.solver.step(&mut self.rng);
-                if self.control == ControlFlow::Contradiction {
-                    //dbg!(self.control);
-                    self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
-                    self.control = ControlFlow::Continue;
-                }
-                /*if self.control == ControlFlow::Finish {
+            self.control = self.solver.step(&mut self.rng);
+            if self.control == ControlFlow::Contradiction {
+                //dbg!(self.control);
+                self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
+                self.control = ControlFlow::Continue;
+            }
+            /*if self.control == ControlFlow::Finish {
                     break;
                 }
             }*/
@@ -219,7 +229,6 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
     }
 
     grid
-
 }
 
 fn extend_gb(dest: &mut ShapeBuilder, src: &ShapeBuilder, transform: Isometry2<f32>) {
@@ -240,20 +249,20 @@ fn cons_shape(f: fn(&mut ShapeBuilder)) -> ShapeBuilder {
 }
 
 /**
-  ```txt
-  +--> +X
-  |
-  V
-  +Y
+```txt
++--> +X
+|
+V
++Y
 
-  +------+
-  | c____e
-  | | d__f
-  | | |  |
-  +-a b--+
-  <-> PATH_WIDTH
-  ```
-  */
++------+
+| c____e
+| | d__f
+| | |  |
++-a b--+
+<-> PATH_WIDTH
+```
+*/
 fn path_right(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -266,20 +275,20 @@ fn path_right(gb: &mut ShapeBuilder) {
 }
 
 /**
-  ```txt
-  +--> +X
-  |
-  V
-  +Y
+```txt
++--> +X
+|
+V
++Y
 
-  +-c  d-+
-  | |  | |
-  | |  | |
-  | |  | |
-  +-a  b-+
-    <--> PATH_WIDTH
-  ```
-  */
++-c  d-+
+| |  | |
+| |  | |
+| |  | |
++-a  b-+
+  <--> PATH_WIDTH
+```
+*/
 fn path_straight(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -290,20 +299,20 @@ fn path_straight(gb: &mut ShapeBuilder) {
 }
 
 /**
-  ```txt
-  +--> +X
-  |
-  V
-  +Y
+```txt
++--> +X
+|
+V
++Y
 
-  +------+
-  | c--d |
-  | |  | |
-  | |  | |
-  +-a  b-+
-  <-> PATH_WIDTH
-  ```
-  */
++------+
+| c--d |
+| |  | |
+| |  | |
++-a  b-+
+<-> PATH_WIDTH
+```
+*/
 fn path_cap(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -313,22 +322,21 @@ fn path_cap(gb: &mut ShapeBuilder) {
     gb.push_indices(&[a, c, c, d, d, b]);
 }
 
-
 /**
-  ```txt
-  +--> +X
-  |
-  V
-  +Y
+```txt
++--> +X
+|
+V
++Y
 
-  +-c  d-+
-  | |  e g
-  | |     
-  | |  f h
-  +-a  b-+
-  <-> PATH_WIDTH
-  ```
-  */
++-c  d-+
+| |  e g
+| |
+| |  f h
++-a  b-+
+<-> PATH_WIDTH
+```
+*/
 fn path_3way(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -340,31 +348,24 @@ fn path_3way(gb: &mut ShapeBuilder) {
     let g = gb.push_vertex([1., PATH_MIN, 0.]);
     let h = gb.push_vertex([1., PATH_MAX, 0.]);
 
-    gb.push_indices(&[
-        c, a,
-        d, e,
-        e, g,
-        f, h,
-        f, b,
-    ]);
+    gb.push_indices(&[c, a, d, e, e, g, f, h, f, b]);
 }
 
-
 /**
-  ```txt
-  +--> +X
-  |
-  V
-  +Y
+```txt
++--> +X
+|
+V
++Y
 
-  +-c  d-+
-  e-i  j-g
++-c  d-+
+e-i  j-g
 
-  f-k  l-h
-  +-a  b-+
-  <-> PATH_WIDTH
-  ```
-  */
+f-k  l-h
++-a  b-+
+<-> PATH_WIDTH
+```
+*/
 fn path_4way(gb: &mut ShapeBuilder) {
     let a = gb.push_vertex([PATH_MIN, 1., 0.]);
     let b = gb.push_vertex([PATH_MAX, 1., 0.]);
@@ -421,8 +422,8 @@ pub fn draw_tile_grid(
             let [x, y] = [x, y].map(|v| v as f32 / maxdim as f32);
 
             gb.push_tf(Similarity3::from_isometry(
-                    Isometry3::translation(x, y, 0.),
-                    1. / maxdim as f32,
+                Isometry3::translation(x, y, 0.),
+                1. / maxdim as f32,
             ));
 
             draw_tile(gb, set, tiles);
@@ -497,8 +498,5 @@ pub fn draw_solver(gb: &mut ShapeBuilder, solver: &Solver) {
 }
 
 pub fn grid_entropy(grid: &Grid) -> usize {
-    grid.data()
-        .iter()
-        .map(count_tileset)
-        .sum()
+    grid.data().iter().map(count_tileset).sum()
 }
