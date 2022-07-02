@@ -240,12 +240,12 @@ impl Solver {
         }
 
         if new_tile_set != self.grid[pos] {
-            self.dirty.push(dbg!(pos));
+            self.dirty.push(pos);
             // ... and if so, mark neighbors as dirty:
             for neigh in neighborhood {
                 if let Some(neigh) = neigh {
                     if count_tileset(&self.grid[neigh]) != 1 {
-                        self.dirty.push(dbg!(neigh));
+                        self.dirty.push(neigh);
                     }
                 }
             }
@@ -308,12 +308,12 @@ impl Solver {
             for neigh in neighbor_coords(&self.grid, pos) {
                 if let Some(neigh) = neigh {
                     if count_tileset(&self.grid[neigh]) != 1 {
-                        self.dirty.push(dbg!(neigh));
+                        self.dirty.push(neigh);
                     }
                 }
             }
 
-            self.dirty.push(dbg!(pos));
+            self.dirty.push(pos);
             ControlFlow::Continue
         } else {
             ControlFlow::Finish

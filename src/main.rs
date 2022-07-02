@@ -67,6 +67,7 @@ impl App for CubeDemo {
             Symmetry::Rot4,
         ));
 
+        /*
         // End cap
         shapes.extend(apply_symmetry(
             &Shape {
@@ -83,6 +84,7 @@ impl App for CubeDemo {
             conn: [CONN_PATH; 4],
             //weight: 1.,
         });
+        */
 
         // Straight path
         shapes.extend(apply_symmetry(
