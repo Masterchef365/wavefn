@@ -67,6 +67,16 @@ impl App for CubeDemo {
             Symmetry::Rot4,
         ));
 
+        // End cap
+        shapes.extend(apply_symmetry(
+            &Shape {
+                art: cons_shape(path_cap),
+                conn: [CONN_WALL, CONN_PATH, CONN_WALL, CONN_WALL],
+                //weight: 1.,
+            },
+            Symmetry::Rot4,
+        ));
+
         // 4-way path
         shapes.push(Shape {
             art: cons_shape(path_4way),
@@ -82,16 +92,6 @@ impl App for CubeDemo {
                 //weight: 1.,
             },
             Symmetry::Rot2,
-        ));
-
-        // End cap
-        shapes.extend(apply_symmetry(
-            &Shape {
-                art: cons_shape(path_cap),
-                conn: [CONN_WALL, CONN_PATH, CONN_WALL, CONN_WALL],
-                //weight: 1.,
-            },
-            Symmetry::Rot4,
         ));
 
         /*
@@ -177,9 +177,9 @@ impl App for CubeDemo {
             //for _ in 0..300 {
             self.control = self.solver.step(&mut self.rng);
             if self.control == ControlFlow::Contradiction {
-                //dbg!(self.control);
-                self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
-                self.control = ControlFlow::Continue;
+                dbg!(self.control);
+                //self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
+                //self.control = ControlFlow::Continue;
             }
             /*if self.control == ControlFlow::Finish {
                     break;

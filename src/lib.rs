@@ -236,17 +236,16 @@ impl Solver {
 
         // Early exit if contradiction
         if new_tile_set.iter().all(|f| !f) {
-            self.grid[pos] = vec![true; self.tiles.len()];
             return ControlFlow::Contradiction;
         }
 
         if new_tile_set != self.grid[pos] {
-            self.dirty.push(pos);
+            self.dirty.push(dbg!(pos));
             // ... and if so, mark neighbors as dirty:
             for neigh in neighborhood {
                 if let Some(neigh) = neigh {
                     if count_tileset(&self.grid[neigh]) != 1 {
-                        self.dirty.push(neigh);
+                        self.dirty.push(dbg!(neigh));
                     }
                 }
             }
@@ -258,11 +257,12 @@ impl Solver {
     }
 
     fn step_dirty(&mut self) -> ControlFlow {
+        /*
         let mut ctrl = self.step_dirty_part();
         if ctrl == ControlFlow::Contradiction {
             ctrl = self.step_dirty_part();
-        }
-        ctrl
+        }*/
+        self.step_dirty_part()
     }
 
     fn step_random(&mut self, rng: &mut Rng) -> ControlFlow {
@@ -286,9 +286,11 @@ impl Solver {
 
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
-                let n = tile_entropy(&self.grid, (x, y));
-                if n == lowest_n {
-                    lowest.push((x, y));
+                if count_tileset(&self.grid[(x, y)]) > 1 {
+                    let n = tile_entropy(&self.grid, (x, y));
+                    if n == lowest_n {
+                        lowest.push((x, y));
+                    }
                 }
             }
         }
@@ -306,12 +308,12 @@ impl Solver {
             for neigh in neighbor_coords(&self.grid, pos) {
                 if let Some(neigh) = neigh {
                     if count_tileset(&self.grid[neigh]) != 1 {
-                        self.dirty.push(neigh);
+                        self.dirty.push(dbg!(neigh));
                     }
                 }
             }
 
-            self.dirty.push(pos);
+            self.dirty.push(dbg!(pos));
             ControlFlow::Continue
         } else {
             ControlFlow::Finish
