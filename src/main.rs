@@ -58,14 +58,20 @@ impl App for CubeDemo {
             Symmetry::Rot4,
         ));
 
+        // 3-way path
+        shapes.push(Shape {
+            art: cons_shape(path_3way),
+            conn: [CONN_PATH, CONN_PATH, CONN_WALL, CONN_PATH],
+            //weight: 1.,
+        });
+
+
         // 4-way path
-        /*
         shapes.push(Shape {
             art: cons_shape(path_4way),
             conn: [CONN_PATH; 4],
             //weight: 1.,
         });
-        */
 
         // Straight path
         shapes.extend(apply_symmetry(
@@ -76,6 +82,17 @@ impl App for CubeDemo {
             },
             Symmetry::Rot2,
         ));
+
+        // End cap
+        shapes.extend(apply_symmetry(
+            &Shape {
+                art: cons_shape(path_cap),
+                conn: [CONN_WALL, CONN_PATH, CONN_WALL, CONN_WALL],
+                //weight: 1.,
+            },
+            Symmetry::Rot2,
+        ));
+
 
         /*
         for shape in &shapes {
@@ -147,17 +164,17 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            for _ in 0..300 {
+            //for _ in 0..300 {
                 self.control = self.solver.step(&mut self.rng);
                 if self.control == ControlFlow::Contradiction {
                     //dbg!(self.control);
                     self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
                     self.control = ControlFlow::Continue;
                 }
-                if self.control == ControlFlow::Finish {
+                /*if self.control == ControlFlow::Finish {
                     break;
                 }
-            }
+            }*/
 
             self.line_gb.clear();
 
@@ -188,10 +205,10 @@ impl App for CubeDemo {
 }
 
 fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
-    let w = 30;
+    let w = 15;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..40 {
+    for _ in 0..4 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
         let idx = rng.gen() as usize % tiles.len();
@@ -260,7 +277,7 @@ fn path_right(gb: &mut ShapeBuilder) {
   | |  | |
   | |  | |
   +-a  b-+
-  <-> PATH_WIDTH
+    <--> PATH_WIDTH
   ```
   */
 fn path_straight(gb: &mut ShapeBuilder) {
@@ -271,6 +288,67 @@ fn path_straight(gb: &mut ShapeBuilder) {
 
     gb.push_indices(&[a, c, b, d]);
 }
+
+/**
+  ```txt
+  +--> +X
+  |
+  V
+  +Y
+
+  +------+
+  | c--d |
+  | |  | |
+  | |  | |
+  +-a  b-+
+  <-> PATH_WIDTH
+  ```
+  */
+fn path_cap(gb: &mut ShapeBuilder) {
+    let a = gb.push_vertex([PATH_MIN, 1., 0.]);
+    let b = gb.push_vertex([PATH_MAX, 1., 0.]);
+    let c = gb.push_vertex([PATH_MIN, PATH_MIN, 0.]);
+    let d = gb.push_vertex([PATH_MAX, PATH_MIN, 0.]);
+
+    gb.push_indices(&[a, c, c, d, d, b]);
+}
+
+
+/**
+  ```txt
+  +--> +X
+  |
+  V
+  +Y
+
+  +-c  d-+
+  | |  e g
+  | |     
+  | |  f h
+  +-a  b-+
+  <-> PATH_WIDTH
+  ```
+  */
+fn path_3way(gb: &mut ShapeBuilder) {
+    let a = gb.push_vertex([PATH_MIN, 1., 0.]);
+    let b = gb.push_vertex([PATH_MAX, 1., 0.]);
+    let c = gb.push_vertex([PATH_MIN, 0., 0.]);
+    let d = gb.push_vertex([PATH_MAX, 0., 0.]);
+
+    let e = gb.push_vertex([PATH_MAX, PATH_MIN, 0.]);
+    let f = gb.push_vertex([PATH_MAX, PATH_MAX, 0.]);
+    let g = gb.push_vertex([1., PATH_MIN, 0.]);
+    let h = gb.push_vertex([1., PATH_MAX, 0.]);
+
+    gb.push_indices(&[
+        c, a,
+        d, e,
+        e, g,
+        f, h,
+        f, b,
+    ]);
+}
+
 
 /**
   ```txt
