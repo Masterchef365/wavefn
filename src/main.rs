@@ -9,8 +9,8 @@ use idek_basics::{
     Array2D, ShapeBuilder,
 };
 use wavefn::{
-    apply_symmetry, compile_tiles, count_tileset, init_grid, pcg::Rng, ControlFlow, Grid, Shape,
-    Solver, Symmetry, Tile, TileSet, update_tile,
+    apply_symmetry, compile_tiles, count_tileset, init_grid, pcg::Rng, update_tile, ControlFlow,
+    Grid, Shape, Solver, Symmetry, Tile, TileSet,
 };
 
 fn main() -> Result<()> {
@@ -48,51 +48,72 @@ impl App for CubeDemo {
         let mut shapes = vec![];
 
         // Right turn
-        shapes.extend(apply_symmetry(
-            &Shape {
-                art: cons_shape(path_right),
-                conn: [CONN_PATH, CONN_PATH, CONN_WALL, CONN_WALL],
-                //weight: 1.,
-            },
-            Symmetry::Rot4,
-        ));
+        let colors = [
+            (2, [1.; 3]), 
+            (3, [0., 0.2, 1.]),
+            (4, [0.2, 1., 0.]),
+        ];
 
-        // 3-way path
-        shapes.extend(apply_symmetry(
-            &Shape {
-                art: cons_shape(path_3way),
-                conn: [CONN_PATH, CONN_PATH, CONN_WALL, CONN_PATH],
-                //weight: 1.,
-            },
-            Symmetry::Rot4,
-        ));
+        for (path, color) in colors {
+            shapes.extend(apply_symmetry(
+                &Shape {
+                    art: cons_shape(color, path_right),
+                    conn: [path, path, CONN_WALL, CONN_WALL],
+                    //weight: 1.,
+                },
+                Symmetry::Rot4,
+            ));
 
-        // End cap
-        shapes.extend(apply_symmetry(
-            &Shape {
-                art: cons_shape(path_cap),
-                conn: [CONN_WALL, CONN_PATH, CONN_WALL, CONN_WALL],
-                //weight: 1.,
-            },
-            Symmetry::Rot4,
-        ));
+            // 3-way path
+            shapes.extend(apply_symmetry(
+                &Shape {
+                    art: cons_shape(color, path_3way),
+                    conn: [path, path, CONN_WALL, path],
+                    //weight: 1.,
+                },
+                Symmetry::Rot4,
+            ));
 
-        // 4-way path
-        shapes.push(Shape {
-            art: cons_shape(path_4way),
-            conn: [CONN_PATH; 4],
-            //weight: 1.,
-        });
+            /*
+            // End cap
+            shapes.extend(apply_symmetry(
+                &Shape {
+                    art: cons_shape(color, path_cap),
+                    conn: [CONN_WALL, path, CONN_WALL, CONN_WALL],
+                    //weight: 1.,
+                },
+                Symmetry::Rot4,
+            ));
 
-        // Straight path
-        shapes.extend(apply_symmetry(
-            &Shape {
-                art: cons_shape(path_straight),
-                conn: [CONN_WALL, CONN_PATH, CONN_WALL, CONN_PATH],
+            // 4-way path
+            shapes.push(Shape {
+                art: cons_shape(color, path_4way),
+                conn: [path; 4],
                 //weight: 1.,
-            },
-            Symmetry::Rot2,
-        ));
+            });
+            */
+
+            // Straight path
+            shapes.extend(apply_symmetry(
+                &Shape {
+                    art: cons_shape(color, path_straight),
+                    conn: [CONN_WALL, path, CONN_WALL, path],
+                    //weight: 1.,
+                },
+                Symmetry::Rot2,
+            ));
+        }
+
+        // Empty tile
+        //for _ in 0..shapes.len() {
+        for _ in 0..8 {
+            shapes.push(Shape {
+                art: ShapeBuilder::new(),
+                conn: [CONN_WALL; 4],
+                //weight: 1.,
+            });
+        }
+
 
         /*
         for shape in &shapes {
@@ -118,10 +139,7 @@ impl App for CubeDemo {
 
         let solver = Solver::from_grid(tiles.clone(), grid.clone());
 
-        draw_solver(
-            &mut line_gb,
-            &solver,
-        );
+        draw_solver(&mut line_gb, &solver);
 
         path_right(&mut tri_gb);
 
@@ -166,12 +184,16 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            for _ in 0..10 {
+            for _ in 0..4 {
                 self.control = self.solver.step(&mut self.rng);
                 if self.control == ControlFlow::Contradiction {
                     dbg!(self.control);
+                    self.solver = Solver::from_grid(
+                        self.solver.tiles().to_vec(), 
+                        new_grid(&mut self.rng, self.solver.tiles())
+                    );
                     //self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
-                    //self.control = ControlFlow::Continue;
+                    self.control = ControlFlow::Continue;
                 }
                 if self.control == ControlFlow::Finish {
                     break;
@@ -179,6 +201,17 @@ impl App for CubeDemo {
             }
 
             self.line_gb.clear();
+
+            /*
+            if self.control != ControlFlow::Finish {
+                self.line_gb.set_color([1., 0.2, 0.2]);
+                draw_background_grid(
+                    &mut self.line_gb, 
+                    self.solver.grid().width(), 
+                    self.solver.grid().height()
+                );
+            }
+            */
 
             draw_solver(&mut self.line_gb, &self.solver);
 
@@ -210,7 +243,7 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
     let w = 30;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..480 {
+    for _ in 0..w*w/32 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
         let pos = (x, y);
@@ -226,6 +259,7 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
 
             if count_tileset(&update_tile(&grid, tiles, pos)) != 1 {
                 grid[pos] = old;
+            } else {
                 break;
             }
         }
@@ -234,19 +268,14 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
     grid
 }
 
-fn extend_gb(dest: &mut ShapeBuilder, src: &ShapeBuilder, transform: Isometry2<f32>) {
-    let base = dest.vertices.len() as u32;
-    dest.vertices.extend_from_slice(&src.vertices);
-    dest.indices.extend(src.indices.iter().map(|i| i + base));
-}
-
 const PATH_WIDTH: f32 = 0.5;
 const PATH_HALFW: f32 = PATH_WIDTH / 2.;
 const PATH_MIN: f32 = 0.5 - PATH_HALFW;
 const PATH_MAX: f32 = 0.5 + PATH_HALFW;
 
-fn cons_shape(f: fn(&mut ShapeBuilder)) -> ShapeBuilder {
+fn cons_shape(color: [f32; 3], f: fn(&mut ShapeBuilder)) -> ShapeBuilder {
     let mut gb = ShapeBuilder::new();
+    gb.set_color(color);
     f(&mut gb);
     gb
 }
@@ -416,7 +445,7 @@ pub fn draw_tile_grid(
             if dirty.contains(&(x, y)) {
                 gb.set_color([1., 0., 0.]);
             } else {
-                gb.set_color([1.; 3]);
+                while gb.pop_color().is_some() {}
             }
 
             let set = &grid[(x, y)];
@@ -492,11 +521,8 @@ pub fn ceil_pow2(v: usize) -> usize {
 }
 
 pub fn draw_solver(gb: &mut ShapeBuilder, solver: &Solver) {
-    gb.set_color([1., 0.2, 0.2]);
-    draw_background_grid(gb, solver.grid().width(), solver.grid().height());
-
-    gb.set_color([1.; 3]);
     let dirty: HashSet<(usize, usize)> = solver.dirty().iter().copied().collect();
+    while gb.pop_color().is_some() {}
     draw_tile_grid(gb, solver.grid(), solver.tiles(), dirty);
 }
 
