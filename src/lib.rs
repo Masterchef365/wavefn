@@ -210,29 +210,7 @@ impl Solver {
         };
 
         // Create a new tile set
-        let mut new_tile_set = self.grid[pos].clone();
-        let neighborhood = neighbor_coords(&self.grid, pos);
-
-        // For each tile this cell could be...
-        for idx in 0..self.tiles.len() {
-            if !new_tile_set[idx] {
-                continue;
-            }
-
-            let mut present = true;
-
-            // Check for all sides whether it's possible to be this tile
-            for (side, neigh_pos) in neighborhood.into_iter().enumerate() {
-                if let Some(neigh) = neigh_pos.map(|p| &self.grid[p]) {
-                    present &= self.tiles[idx].rules[side]
-                        .iter()
-                        .zip(neigh)
-                        .any(|(t, n)| t & n);
-                }
-            }
-
-            new_tile_set[idx] = present;
-        }
+        let new_tile_set = update_tile(&self.grid, &self.tiles, pos);
 
         // Early exit if contradiction
         if new_tile_set.iter().all(|f| !f) {
@@ -240,15 +218,9 @@ impl Solver {
         }
 
         if new_tile_set != self.grid[pos] {
+            // ... and if so, mark us neighbors as dirty:
             self.dirty.push(pos);
-            // ... and if so, mark neighbors as dirty:
-            for neigh in neighborhood {
-                if let Some(neigh) = neigh {
-                    if count_tileset(&self.grid[neigh]) != 1 {
-                        self.dirty.push(neigh);
-                    }
-                }
-            }
+            self.set_neighbors_dirty(pos);
             self.grid[pos] = new_tile_set;
         }
 
@@ -256,19 +228,29 @@ impl Solver {
 
     }
 
+    fn set_neighbors_dirty(&mut self, pos: Coord) {
+        for neigh in neighbor_coords(&self.grid, pos) {
+            if let Some(neigh) = neigh {
+                if count_tileset(&self.grid[neigh]) != 1 {
+                    self.dirty.push(neigh);
+                }
+            }
+        }
+    }
+
     fn step_dirty(&mut self) -> ControlFlow {
         /*
-        let mut ctrl = self.step_dirty_part();
-        if ctrl == ControlFlow::Contradiction {
-            ctrl = self.step_dirty_part();
-        }*/
+           let mut ctrl = self.step_dirty_part();
+           if ctrl == ControlFlow::Contradiction {
+           ctrl = self.step_dirty_part();
+           }*/
         self.step_dirty_part()
     }
 
     fn step_random(&mut self, rng: &mut Rng) -> ControlFlow {
         //todo!("Shannon entropy random selection")
         // Find lowest entropy
-               // Find lowest entropy
+        // Find lowest entropy
         let mut lowest_n = usize::MAX;
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
@@ -294,7 +276,7 @@ impl Solver {
                 }
             }
         }
- 
+
         // Randomly select one and collapse it, marking its neighbors dirty
         if let Some(&pos) = choose(rng, &lowest) {
             let ones = self.grid[pos]
@@ -305,13 +287,7 @@ impl Solver {
             let idx = ones[rng.gen() as usize % ones.len()];
             self.grid[pos][idx] = false;
 
-            for neigh in neighbor_coords(&self.grid, pos) {
-                if let Some(neigh) = neigh {
-                    if count_tileset(&self.grid[neigh]) != 1 {
-                        self.dirty.push(neigh);
-                    }
-                }
-            }
+            self.set_neighbors_dirty(pos);
 
             self.dirty.push(pos);
             ControlFlow::Continue
@@ -319,6 +295,34 @@ impl Solver {
             ControlFlow::Finish
         }
     }
+}
+
+pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
+    let mut set = grid[pos].clone();
+    let neighborhood = neighbor_coords(&grid, pos);
+
+    // For each tile this cell could be...
+    for idx in 0..tiles.len() {
+        if !set[idx] {
+            continue;
+        }
+
+        let mut present = true;
+
+        // Check for all sides whether it's possible to be this tile
+        for (side, neigh_pos) in neighborhood.into_iter().enumerate() {
+            if let Some(neigh) = neigh_pos.map(|p| &grid[p]) {
+                present &= tiles[idx].rules[side]
+                    .iter()
+                    .zip(neigh)
+                    .any(|(t, n)| t & n);
+            }
+        }
+
+        set[idx] = present;
+    }
+
+    set
 }
 
 fn tile_entropy(grid: &Grid, pos: Coord) -> usize {

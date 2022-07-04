@@ -10,7 +10,7 @@ use idek_basics::{
 };
 use wavefn::{
     apply_symmetry, compile_tiles, count_tileset, init_grid, pcg::Rng, ControlFlow, Grid, Shape,
-    Solver, Symmetry, Tile, TileSet,
+    Solver, Symmetry, Tile, TileSet, update_tile,
 };
 
 fn main() -> Result<()> {
@@ -77,6 +77,7 @@ impl App for CubeDemo {
             },
             Symmetry::Rot4,
         ));
+        */
 
         // 4-way path
         shapes.push(Shape {
@@ -84,7 +85,6 @@ impl App for CubeDemo {
             conn: [CONN_PATH; 4],
             //weight: 1.,
         });
-        */
 
         // Straight path
         shapes.extend(apply_symmetry(
@@ -176,17 +176,17 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            //for _ in 0..300 {
-            self.control = self.solver.step(&mut self.rng);
-            if self.control == ControlFlow::Contradiction {
-                dbg!(self.control);
-                //self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
-                //self.control = ControlFlow::Continue;
-            }
-            /*if self.control == ControlFlow::Finish {
+            for _ in 0..10 {
+                self.control = self.solver.step(&mut self.rng);
+                if self.control == ControlFlow::Contradiction {
+                    dbg!(self.control);
+                    //self.solver = Solver::from_grid(self.solver.tiles().to_vec(), self.grid.clone());
+                    //self.control = ControlFlow::Continue;
+                }
+                if self.control == ControlFlow::Finish {
                     break;
                 }
-            }*/
+            }
 
             self.line_gb.clear();
 
@@ -217,17 +217,27 @@ impl App for CubeDemo {
 }
 
 fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
-    let w = 15;
+    let w = 30;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..4 {
+    for _ in 0..40 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
-        let idx = rng.gen() as usize % tiles.len();
+        let pos = (x, y);
 
-        let tile = &mut grid[(x, y)];
-        tile.iter_mut().for_each(|b| *b = false);
-        tile[idx] = true;
+        for _ in 0..tiles.len() {
+            let idx = rng.gen() as usize % tiles.len();
+
+            let tile = &mut grid[pos];
+            let old = tile.clone();
+
+            tile.iter_mut().for_each(|b| *b = false);
+            tile[idx] = true;
+
+            if count_tileset(&update_tile(&grid, tiles, pos)) != 1 {
+                grid[pos] = old;
+            }
+        }
     }
 
     grid
