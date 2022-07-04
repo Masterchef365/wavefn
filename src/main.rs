@@ -118,17 +118,9 @@ impl App for CubeDemo {
 
         let solver = Solver::from_grid(tiles.clone(), grid.clone());
 
-        draw_tile_grid(
+        draw_solver(
             &mut line_gb,
-            &solver.grid(),
-            &solver.tiles(),
-            Default::default(),
-        );
-        draw_tile_grid(
-            &mut line_gb,
-            &solver.grid(),
-            &solver.tiles(),
-            Default::default(),
+            &solver,
         );
 
         path_right(&mut tri_gb);
