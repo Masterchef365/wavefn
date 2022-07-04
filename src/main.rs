@@ -67,7 +67,6 @@ impl App for CubeDemo {
             Symmetry::Rot4,
         ));
 
-        /*
         // End cap
         shapes.extend(apply_symmetry(
             &Shape {
@@ -77,7 +76,6 @@ impl App for CubeDemo {
             },
             Symmetry::Rot4,
         ));
-        */
 
         // 4-way path
         shapes.push(Shape {
@@ -220,7 +218,7 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
     let w = 30;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..40 {
+    for _ in 0..480 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
         let pos = (x, y);
@@ -236,6 +234,7 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
 
             if count_tileset(&update_tile(&grid, tiles, pos)) != 1 {
                 grid[pos] = old;
+                break;
             }
         }
     }
