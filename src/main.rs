@@ -184,7 +184,7 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            for _ in 0..400 {
+            for _ in 0..40 {
                 self.control = self.solver.step(&mut self.rng);
                 if self.control == ControlFlow::Contradiction {
                     dbg!(self.control);
@@ -258,7 +258,7 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
             tile[idx] = true;
 
             let mut ts = update_tile(&grid, tiles, pos);
-            if ts.count() > 1 {
+            if ts.count() != 1 {
                 grid[pos] = old;
             } else {
                 break;
