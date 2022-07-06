@@ -130,7 +130,7 @@ pub fn compile_tiles(shapes: &[Shape]) -> Vec<Tile> {
 /// TODO: Use a more efficient data structure!
 ///     * densely packed bits, u8s or maybe u128s or SIMD?
 ///     * Sorted array of usize? (indices)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct TileSet {
     bits: Vec<bool>,
     count: Option<usize>,
@@ -166,6 +166,12 @@ impl TileSet {
     pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut bool> {
         self.count = None;
         self.bits.iter_mut()
+    }
+}
+
+impl PartialEq for TileSet {
+    fn eq(&self, other: &Self) -> bool {
+        self.bits == other.bits
     }
 }
 
