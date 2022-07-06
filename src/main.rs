@@ -9,7 +9,7 @@ use idek_basics::{
     Array2D, ShapeBuilder,
 };
 use wavefn::{
-    apply_symmetry, compile_tiles, count_tileset, init_grid, pcg::Rng, update_tile, ControlFlow,
+    apply_symmetry, compile_tiles, init_grid, pcg::Rng, update_tile, ControlFlow,
     Grid, Shape, Solver, Symmetry, Tile, TileSet,
 };
 
@@ -84,6 +84,7 @@ impl App for CubeDemo {
                 },
                 Symmetry::Rot4,
             ));
+            */
 
             // 4-way path
             shapes.push(Shape {
@@ -91,7 +92,6 @@ impl App for CubeDemo {
                 conn: [path; 4],
                 //weight: 1.,
             });
-            */
 
             // Straight path
             shapes.extend(apply_symmetry(
@@ -184,7 +184,7 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            for _ in 0..4 {
+            for _ in 0..40 {
                 self.control = self.solver.step(&mut self.rng);
                 if self.control == ControlFlow::Contradiction {
                     dbg!(self.control);
@@ -240,10 +240,10 @@ impl App for CubeDemo {
 }
 
 fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
-    let w = 30;
+    let w = 100;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..w*w/32 {
+    for _ in 0..1 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
         let pos = (x, y);
@@ -257,7 +257,8 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
             tile.iter_mut().for_each(|b| *b = false);
             tile[idx] = true;
 
-            if count_tileset(&update_tile(&grid, tiles, pos)) != 1 {
+            let mut ts = update_tile(&grid, tiles, pos);
+            if ts.count() > 1 {
                 grid[pos] = old;
             } else {
                 break;
@@ -526,6 +527,6 @@ pub fn draw_solver(gb: &mut ShapeBuilder, solver: &Solver) {
     draw_tile_grid(gb, solver.grid(), solver.tiles(), dirty);
 }
 
-pub fn grid_entropy(grid: &Grid) -> usize {
+/*pub fn grid_entropy(grid: &Grid) -> usize {
     grid.data().iter().map(count_tileset).sum()
-}
+}*/

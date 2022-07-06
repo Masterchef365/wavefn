@@ -3,7 +3,7 @@ use idek_basics::{
     Array2D, ShapeBuilder,
 };
 use pcg::Rng;
-use std::{collections::HashSet, f32::consts::FRAC_PI_2};
+use std::{collections::HashSet, f32::consts::FRAC_PI_2, ops::{Index, IndexMut}};
 pub mod pcg;
 
 pub type Coord = (usize, usize);
@@ -113,10 +113,10 @@ pub fn compile_tiles(shapes: &[Shape]) -> Vec<Tile> {
         // Check our connection points against possible partners
         let pairs = [(0, 2), (1, 3), (2, 0), (3, 1)];
         let rules: [TileSet; 4] = pairs.map(|(side, partner_side)| {
-            shapes
+            TileSet::from_vec(shapes
                 .iter()
                 .map(|partner| shape.conn[side] == partner.conn[partner_side])
-                .collect()
+                .collect::<Vec<bool>>())
         });
 
         tiles.push(Tile { art, rules });
@@ -130,7 +130,58 @@ pub fn compile_tiles(shapes: &[Shape]) -> Vec<Tile> {
 /// TODO: Use a more efficient data structure!
 ///     * densely packed bits, u8s or maybe u128s or SIMD?
 ///     * Sorted array of usize? (indices)
-pub type TileSet = Vec<bool>;
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TileSet {
+    bits: Vec<bool>,
+    count: Option<usize>,
+}
+
+impl TileSet {
+    pub fn from_vec(bits: Vec<bool>) -> Self {
+        Self {
+            bits,
+            count: None,
+        }
+    }
+
+    pub fn count(&mut self) -> usize {
+        let c = match self.count {
+            Some(c) => c,
+            None => self.iter().filter(|p| **p).count(),
+        };
+
+        self.count = Some(c);
+
+        c
+    }
+
+    pub fn len(&self) -> usize {
+        self.bits.len()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item=&bool> {
+        self.bits.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut bool> {
+        self.count = None;
+        self.bits.iter_mut()
+    }
+}
+
+impl Index<usize> for TileSet {
+    type Output = bool;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.bits[index]
+    }
+}
+
+impl IndexMut<usize> for TileSet {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.count = None;
+        &mut self.bits[index]
+    }
+}
 
 #[derive(Clone)]
 pub struct Tile {
@@ -159,7 +210,7 @@ pub struct Solver {
 }
 
 pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Grid {
-    let init_tile_set = vec![true; tiles.len()];
+    let init_tile_set = TileSet::from_vec(vec![true; tiles.len()]);
     let data = vec![init_tile_set; width * height];
     Array2D::from_array(width, data)
 }
@@ -197,7 +248,7 @@ impl Solver {
         let mut lowest = None;
         let mut lowest_entropy = usize::MAX;
         for (idx, pos) in self.dirty.iter().enumerate() {
-            let entropy = tile_entropy(&self.grid, *pos);
+            let entropy = tile_entropy(&mut self.grid, *pos);
             if entropy < lowest_entropy {
                 lowest = Some(idx);
                 lowest_entropy = entropy;
@@ -231,7 +282,7 @@ impl Solver {
     fn set_neighbors_dirty(&mut self, pos: Coord) {
         for neigh in neighbor_coords(&self.grid, pos) {
             if let Some(neigh) = neigh {
-                if count_tileset(&self.grid[neigh]) != 1 {
+                if self.grid[neigh].count() != 1 {
                     self.dirty.push(neigh);
                 }
             }
@@ -254,8 +305,8 @@ impl Solver {
         let mut lowest_n = usize::MAX;
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
-                if count_tileset(&self.grid[(x, y)]) > 1 {
-                    let n = tile_entropy(&self.grid, (x, y));
+                if self.grid[(x, y)].count() > 1 {
+                    let n = tile_entropy(&mut self.grid, (x, y));
                     if n < lowest_n {
                         lowest_n = n;
                     }
@@ -268,8 +319,8 @@ impl Solver {
 
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
-                if count_tileset(&self.grid[(x, y)]) > 1 {
-                    let n = tile_entropy(&self.grid, (x, y));
+                if self.grid[(x, y)].count() > 1 {
+                    let n = tile_entropy(&mut self.grid, (x, y));
                     if n == lowest_n {
                         lowest.push((x, y));
                     }
@@ -314,7 +365,7 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
             if let Some(neigh) = neigh_pos.map(|p| &grid[p]) {
                 present &= tiles[idx].rules[side]
                     .iter()
-                    .zip(neigh)
+                    .zip(neigh.iter())
                     .any(|(t, n)| t & n);
             }
         }
@@ -325,22 +376,17 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
     set
 }
 
-fn tile_entropy(grid: &Grid, pos: Coord) -> usize {
-    let mut n = count_tileset(&grid[pos]);
+fn tile_entropy(grid: &mut Grid, pos: Coord) -> usize {
+    let mut n = grid[pos].count();
 
     for neigh in neighbor_coords(grid, pos) {
         if let Some(neigh) = neigh {
-            n += count_tileset(&grid[neigh]);
+            n += grid[neigh].count();
         } else {
             n += grid[pos].len();
         }
     }
     n
-}
-
-pub fn count_tileset(ts: &TileSet) -> usize {
-    //ts.iter().filter(|p| **p).count()
-    ts.iter().map(|t| *t as usize).sum()
 }
 
 fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
