@@ -184,7 +184,7 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            for _ in 0..40 {
+            for _ in 0..400 {
                 self.control = self.solver.step(&mut self.rng);
                 if self.control == ControlFlow::Contradiction {
                     dbg!(self.control);
@@ -240,10 +240,10 @@ impl App for CubeDemo {
 }
 
 fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
-    let w = 100;
+    let w = 40;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..1 {
+    for _ in 0..8*8 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
         let pos = (x, y);
