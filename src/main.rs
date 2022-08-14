@@ -240,10 +240,11 @@ impl App for CubeDemo {
 }
 
 fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
-    let w = 30;
+    let w = 100;
     let mut grid = init_grid(w, w, &tiles);
 
-    for _ in 0..w*w/32 {
+    let k = w*w / 32;
+    for _ in 0..0 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
         let pos = (x, y);

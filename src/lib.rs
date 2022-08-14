@@ -186,10 +186,12 @@ impl Solver {
     }
 
     pub fn step(&mut self, rng: &mut Rng) -> ControlFlow {
-        if self.dirty.is_empty() {
-            self.step_random(rng)
-        } else {
-            self.step_dirty()
+        loop {
+            if self.dirty.is_empty() {
+                break self.step_random(rng);
+            } else {
+                self.step_dirty();
+            }
         }
     }
 
