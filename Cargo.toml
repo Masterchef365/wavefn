@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-idek_basics = { path = "../idek_basics" }
-#idek_basics = { git = "https://github.com/Masterchef365/idek-basics.git", rev = "6a3e9c7" }
+#idek_basics = { path = "../idek_basics" }
+idek_basics = { git = "https://github.com/Masterchef365/idek-basics.git", branch = "offset" }
 
 [profile.release]
 debug = true
