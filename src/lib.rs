@@ -140,10 +140,7 @@ impl TileSet {
     const MAX_SIZE: usize = 64;
 
     pub fn new() -> Self {
-        Self {
-            len: 0,
-            values: 0,
-        }
+        Self { len: 0, values: 0 }
     }
 
     pub fn zeros(len: usize) -> Self {
@@ -153,7 +150,6 @@ impl TileSet {
         }
         ts
     }
-
 
     pub fn ones(len: usize) -> Self {
         let mut ts = Self::new();
@@ -301,10 +297,8 @@ impl Solver {
 
     fn set_neighbors_dirty(&mut self, pos: Coord) {
         for neigh in neighbor_coords(&self.grid, pos) {
-            if let Some(neigh) = neigh {
-                if self.grid[neigh].count_ones() != 1 {
-                    self.dirty.push(neigh);
-                }
+            if self.grid[neigh].count_ones() != 1 {
+                self.dirty.push(neigh);
             }
         }
     }
@@ -370,7 +364,7 @@ impl Solver {
 
 pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
     let mut set = grid[pos].clone();
-    let neighborhood = neighbor_coords(&grid, pos);
+    let neighborhood = || neighbor_coords(&grid, pos);
 
     // For each tile this cell could be...
     for idx in 0..tiles.len() {
@@ -381,10 +375,12 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
         let mut present = true;
 
         // Check for all sides whether it's possible to be this tile
-        for (side, neigh_pos) in neighborhood.into_iter().enumerate() {
-            if let Some(neigh) = neigh_pos.map(|p| &grid[p]) {
-                present &= tiles[idx].rules[side].iter().zip(neigh.iter()).any(|(t, n)| t & n);
-            }
+        for (side, neigh_pos) in neighborhood().into_iter().enumerate() {
+            let neigh = grid[neigh_pos];
+            present &= tiles[idx].rules[side]
+                .iter()
+                .zip(neigh.iter())
+                .any(|(t, n)| t & n);
         }
 
         set.set(idx, present);
@@ -394,16 +390,18 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
 }
 
 fn tile_entropy(grid: &Grid, pos: Coord) -> usize {
-    let mut n = grid[pos].count_ones();
+    let mut entropy = grid[pos].count_ones();
 
+    let mut num_neighbors = 0;
     for neigh in neighbor_coords(grid, pos) {
-        if let Some(neigh) = neigh {
-            n += grid[neigh].count_ones();
-        } else {
-            n += grid[pos].len();
-        }
+        entropy += grid[neigh].count_ones();
+        num_neighbors += 1;
     }
-    n
+
+    const MAX_NEIGHBORS: usize = 4;
+    entropy += (MAX_NEIGHBORS - num_neighbors) * grid[pos].len();
+
+    entropy
 }
 
 fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
@@ -415,9 +413,14 @@ fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
     }
 }
 
-fn neighbor_coords<T>(arr: &Array2D<T>, (x, y): Coord) -> [Option<Coord>; 4] {
+fn neighbor_coords<T>(arr: &Array2D<T>, (x, y): Coord) -> impl Iterator<Item = Coord> + '_ {
     [(1, 0), (0, 1), (-1, 0), (0, -1)]
-        .map(|(dx, dy)| bnd_chk(x, dx, arr.width()).zip(bnd_chk(y, dy, arr.height())))
+        .into_iter()
+            .filter_map(move |(dx, dy)| {
+                let x = bnd_chk(x, dx, arr.width());
+                let y = bnd_chk(y, dy, arr.height());
+                x.zip(y)
+            })
 }
 
 fn bnd_chk(x: usize, dx: isize, max: usize) -> Option<usize> {

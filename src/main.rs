@@ -189,7 +189,7 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            for _ in 0..40 {
+            for _ in 0..10 {
                 self.control = self.solver.step(&mut self.rng);
                 if self.control == ControlFlow::Contradiction {
                     dbg!(self.control);
