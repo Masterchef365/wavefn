@@ -159,6 +159,10 @@ impl TileSet {
         ts
     }
 
+    pub fn all_zeros(&self) -> bool {
+        self.values == 0
+    }
+
     pub fn len(&self) -> usize {
         usize::from(self.len)
     }
@@ -183,7 +187,7 @@ impl TileSet {
         self.len += 1;
     }
 
-    pub fn count_ones(&self) -> usize {
+    pub fn count_tiles(&self) -> usize {
         self.values.count_ones() as usize
     }
 }
@@ -256,7 +260,11 @@ impl Solver {
             if self.dirty.is_empty() {
                 break self.step_random(rng);
             } else {
-                self.step_dirty();
+                let c = self.step_dirty();
+                if c == ControlFlow::Contradiction {
+                    dbg!(c);
+                    break c;
+                }
             }
         }
     }
@@ -297,7 +305,7 @@ impl Solver {
 
     fn set_neighbors_dirty(&mut self, pos: Coord) {
         for neigh in neighbor_coords(&self.grid, pos) {
-            if self.grid[neigh].count_ones() != 1 {
+            if self.grid[neigh].count_tiles() != 1 {
                 self.dirty.push(neigh);
             }
         }
@@ -319,7 +327,7 @@ impl Solver {
         let mut lowest_n = usize::MAX;
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
-                if self.grid[(x, y)].count_ones() > 1 {
+                if self.grid[(x, y)].count_tiles() > 1 {
                     let n = tile_entropy(&self.grid, (x, y));
                     if n < lowest_n {
                         lowest_n = n;
@@ -333,10 +341,12 @@ impl Solver {
 
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
-                if self.grid[(x, y)].count_ones() > 1 {
-                    let n = tile_entropy(&self.grid, (x, y));
+                let pos = (x, y);
+
+                if self.grid[pos].count_tiles() > 1 {
+                    let n = tile_entropy(&self.grid, pos);
                     if n == lowest_n {
-                        lowest.push((x, y));
+                        lowest.push(pos);
                     }
                 }
             }
@@ -364,7 +374,6 @@ impl Solver {
 
 pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
     let mut set = grid[pos].clone();
-    let neighborhood = || neighbor_coords(&grid, pos);
 
     // For each tile this cell could be...
     for idx in 0..tiles.len() {
@@ -375,7 +384,7 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
         let mut present = true;
 
         // Check for all sides whether it's possible to be this tile
-        for (side, neigh_pos) in neighborhood().into_iter().enumerate() {
+        for (side, neigh_pos) in neighbor_coords(&grid, pos).into_iter().enumerate() {
             let neigh = grid[neigh_pos];
             present &= tiles[idx].rules[side]
                 .iter()
@@ -390,11 +399,11 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
 }
 
 fn tile_entropy(grid: &Grid, pos: Coord) -> usize {
-    let mut entropy = grid[pos].count_ones();
+    let mut entropy = grid[pos].count_tiles();
 
     let mut num_neighbors = 0;
     for neigh in neighbor_coords(grid, pos) {
-        entropy += grid[neigh].count_ones();
+        entropy += grid[neigh].count_tiles();
         num_neighbors += 1;
     }
 
@@ -416,11 +425,11 @@ fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
 fn neighbor_coords<T>(arr: &Array2D<T>, (x, y): Coord) -> impl Iterator<Item = Coord> + '_ {
     [(1, 0), (0, 1), (-1, 0), (0, -1)]
         .into_iter()
-            .filter_map(move |(dx, dy)| {
-                let x = bnd_chk(x, dx, arr.width());
-                let y = bnd_chk(y, dy, arr.height());
-                x.zip(y)
-            })
+        .filter_map(move |(dx, dy)| {
+            let x = bnd_chk(x, dx, arr.width());
+            let y = bnd_chk(y, dy, arr.height());
+            x.zip(y)
+        })
 }
 
 fn bnd_chk(x: usize, dx: isize, max: usize) -> Option<usize> {

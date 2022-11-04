@@ -64,6 +64,7 @@ impl App for CubeDemo {
                 Symmetry::Rot4,
             ));
 
+            /*
             // 3-way path
             shapes.extend(apply_symmetry(
                 &Shape {
@@ -74,7 +75,6 @@ impl App for CubeDemo {
                 Symmetry::Rot4,
             ));
 
-            /*
             // End cap
             shapes.extend(apply_symmetry(
                 &Shape {
@@ -245,10 +245,9 @@ impl App for CubeDemo {
 }
 
 fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
-    let w = 150;
+    let w = 100;
     let mut grid = init_grid(w, w, &tiles);
 
-    let k = w*w / 32;
     for _ in 0..0 {
         let x = rng.gen() as usize % grid.width();
         let y = rng.gen() as usize % grid.height();
@@ -263,7 +262,7 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
             *tile = TileSet::zeros(tile.len());
             tile.set(idx, true);
 
-            if update_tile(&grid, tiles, pos).count_ones() != 1 {
+            if update_tile(&grid, tiles, pos).count_tiles() != 1 {
                 grid[pos] = old;
             } else {
                 break;
@@ -534,8 +533,4 @@ pub fn draw_solver(gb: &mut ShapeBuilder, solver: &Solver) {
     let dirty: HashSet<(usize, usize)> = solver.dirty().iter().copied().collect();
     while gb.pop_color().is_some() {}
     draw_tile_grid(gb, solver.grid(), solver.tiles(), dirty);
-}
-
-pub fn grid_entropy(grid: &Grid) -> usize {
-    grid.data().iter().map(|v| v.count_ones()).sum()
 }
