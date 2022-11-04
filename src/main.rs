@@ -9,7 +9,7 @@ use idek_basics::{
     Array2D, ShapeBuilder,
 };
 use wavefn::{
-    apply_symmetry, compile_tiles, count_tileset, init_grid, pcg::Rng, update_tile, ControlFlow,
+    apply_symmetry, compile_tiles, init_grid, pcg::Rng, update_tile, ControlFlow,
     Grid, Shape, Solver, Symmetry, Tile, TileSet,
 };
 
@@ -263,7 +263,7 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
             *tile = TileSet::zeros(tile.len());
             tile.set(idx, true);
 
-            if count_tileset(&update_tile(&grid, tiles, pos)) != 1 {
+            if update_tile(&grid, tiles, pos).count_ones() != 1 {
                 grid[pos] = old;
             } else {
                 break;
@@ -537,5 +537,5 @@ pub fn draw_solver(gb: &mut ShapeBuilder, solver: &Solver) {
 }
 
 pub fn grid_entropy(grid: &Grid) -> usize {
-    grid.data().iter().map(count_tileset).sum()
+    grid.data().iter().map(|v| v.count_ones()).sum()
 }

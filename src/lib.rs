@@ -186,6 +186,10 @@ impl TileSet {
         self.set(self.len(), val);
         self.len += 1;
     }
+
+    pub fn count_ones(&self) -> usize {
+        self.values.count_ones() as usize
+    }
 }
 
 impl FromIterator<bool> for TileSet {
@@ -298,7 +302,7 @@ impl Solver {
     fn set_neighbors_dirty(&mut self, pos: Coord) {
         for neigh in neighbor_coords(&self.grid, pos) {
             if let Some(neigh) = neigh {
-                if count_tileset(&self.grid[neigh]) != 1 {
+                if self.grid[neigh].count_ones() != 1 {
                     self.dirty.push(neigh);
                 }
             }
@@ -321,7 +325,7 @@ impl Solver {
         let mut lowest_n = usize::MAX;
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
-                if count_tileset(&self.grid[(x, y)]) > 1 {
+                if self.grid[(x, y)].count_ones() > 1 {
                     let n = tile_entropy(&self.grid, (x, y));
                     if n < lowest_n {
                         lowest_n = n;
@@ -335,7 +339,7 @@ impl Solver {
 
         for y in 0..self.grid.height() {
             for x in 0..self.grid.width() {
-                if count_tileset(&self.grid[(x, y)]) > 1 {
+                if self.grid[(x, y)].count_ones() > 1 {
                     let n = tile_entropy(&self.grid, (x, y));
                     if n == lowest_n {
                         lowest.push((x, y));
@@ -390,21 +394,16 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
 }
 
 fn tile_entropy(grid: &Grid, pos: Coord) -> usize {
-    let mut n = count_tileset(&grid[pos]);
+    let mut n = grid[pos].count_ones();
 
     for neigh in neighbor_coords(grid, pos) {
         if let Some(neigh) = neigh {
-            n += count_tileset(&grid[neigh]);
+            n += grid[neigh].count_ones();
         } else {
             n += grid[pos].len();
         }
     }
     n
-}
-
-pub fn count_tileset(ts: &TileSet) -> usize {
-    //ts.iter().filter(|p| **p).count()
-    ts.iter().map(|t| t as usize).sum()
 }
 
 fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
