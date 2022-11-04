@@ -140,6 +140,8 @@ impl App for CubeDemo {
         let solver = Solver::from_grid(tiles.clone(), grid.clone());
 
         draw_solver(&mut line_gb, &solver);
+        draw_solver(&mut line_gb, &solver);
+        draw_solver(&mut line_gb, &solver);
 
         path_right(&mut tri_gb);
 
@@ -184,7 +186,7 @@ impl App for CubeDemo {
         let cont = self.control == ControlFlow::Continue;
 
         if frame && cont {
-            for _ in 0..4 {
+            for _ in 0..40 {
                 self.control = self.solver.step(&mut self.rng);
                 if self.control == ControlFlow::Contradiction {
                     dbg!(self.control);
@@ -240,7 +242,7 @@ impl App for CubeDemo {
 }
 
 fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
-    let w = 100;
+    let w = 150;
     let mut grid = init_grid(w, w, &tiles);
 
     let k = w*w / 32;
@@ -470,6 +472,8 @@ pub fn draw_tile(gb: &mut ShapeBuilder, set: &TileSet, tiles: &[Tile]) {
     let total = set.iter().filter(|p| **p).count();
     let side_len = ceil_pow2(total);
 
+    let all = total == set.len();
+
     'outer: for y in 0..side_len {
         for x in 0..side_len {
             let scale = 1. / side_len as f32;
@@ -493,6 +497,8 @@ pub fn draw_tile(gb: &mut ShapeBuilder, set: &TileSet, tiles: &[Tile]) {
             gb.push_tf(pos_scale2d(x, y, scale));
             gb.append(&tiles[idx].art);
             gb.pop_tf();
+
+            if all { break 'outer };
         }
     }
 }
