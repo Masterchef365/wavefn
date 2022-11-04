@@ -145,6 +145,9 @@ impl App for CubeDemo {
 
         path_right(&mut tri_gb);
 
+        dbg!(line_gb.vertices.len());
+        dbg!(line_gb.indices.len());
+
         let line_verts = ctx.vertices(&line_gb.vertices, true)?;
         let line_indices = ctx.indices(&line_gb.indices, true)?;
 
@@ -257,8 +260,8 @@ fn new_grid(rng: &mut Rng, tiles: &[Tile]) -> Array2D<TileSet> {
             let tile = &mut grid[pos];
             let old = tile.clone();
 
-            tile.iter_mut().for_each(|b| *b = false);
-            tile[idx] = true;
+            *tile = TileSet::zeros(tile.len());
+            tile.set(idx, true);
 
             if count_tileset(&update_tile(&grid, tiles, pos)) != 1 {
                 grid[pos] = old;
@@ -469,7 +472,7 @@ pub fn draw_tile_grid(
 }
 
 pub fn draw_tile(gb: &mut ShapeBuilder, set: &TileSet, tiles: &[Tile]) {
-    let total = set.iter().filter(|p| **p).count();
+    let total = set.iter().filter(|p| *p).count();
     let side_len = ceil_pow2(total);
 
     let all = total == set.len();
@@ -485,7 +488,7 @@ pub fn draw_tile(gb: &mut ShapeBuilder, set: &TileSet, tiles: &[Tile]) {
             let idx = set
                 .iter()
                 .enumerate()
-                .filter(|(_, p)| **p)
+                .filter(|(_, p)| *p)
                 .skip(n)
                 .find_map(|(i, p)| p.then(|| i));
 

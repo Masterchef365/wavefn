@@ -130,7 +130,73 @@ pub fn compile_tiles(shapes: &[Shape]) -> Vec<Tile> {
 /// TODO: Use a more efficient data structure!
 ///     * densely packed bits, u8s or maybe u128s or SIMD?
 ///     * Sorted array of usize? (indices)
-pub type TileSet = Vec<bool>;
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct TileSet {
+    values: u64,
+    len: u8,
+}
+
+impl TileSet {
+    const MAX_SIZE: usize = 64;
+
+    pub fn new() -> Self {
+        Self {
+            len: 0,
+            values: 0,
+        }
+    }
+
+    pub fn zeros(len: usize) -> Self {
+        let mut ts = Self::new();
+        for _ in 0..len {
+            ts.push(false);
+        }
+        ts
+    }
+
+
+    pub fn ones(len: usize) -> Self {
+        let mut ts = Self::new();
+        for _ in 0..len {
+            ts.push(true);
+        }
+        ts
+    }
+
+    pub fn len(&self) -> usize {
+        usize::from(self.len)
+    }
+
+    pub fn get(&self, idx: usize) -> bool {
+        assert!(idx < Self::MAX_SIZE);
+        self.values & (1 << idx) != 0
+    }
+
+    pub fn set(&mut self, idx: usize, val: bool) {
+        assert!(idx < Self::MAX_SIZE);
+        let bit = 1 << idx;
+        self.values = (self.values & !bit) | if val { bit } else { 0 };
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = bool> + '_ {
+        (0..self.len()).map(|i| self.get(i))
+    }
+
+    pub fn push(&mut self, val: bool) {
+        self.set(self.len(), val);
+        self.len += 1;
+    }
+}
+
+impl FromIterator<bool> for TileSet {
+    fn from_iter<T: IntoIterator<Item = bool>>(iter: T) -> Self {
+        let mut ts = TileSet::new();
+        for i in iter {
+            ts.push(i);
+        }
+        ts
+    }
+}
 
 #[derive(Clone)]
 pub struct Tile {
@@ -159,7 +225,7 @@ pub struct Solver {
 }
 
 pub fn init_grid(width: usize, height: usize, tiles: &[Tile]) -> Grid {
-    let init_tile_set = vec![true; tiles.len()];
+    let init_tile_set = TileSet::ones(tiles.len());
     let data = vec![init_tile_set; width * height];
     Array2D::from_array(width, data)
 }
@@ -227,7 +293,6 @@ impl Solver {
         }
 
         ControlFlow::Continue
-
     }
 
     fn set_neighbors_dirty(&mut self, pos: Coord) {
@@ -242,10 +307,10 @@ impl Solver {
 
     fn step_dirty(&mut self) -> ControlFlow {
         /*
-           let mut ctrl = self.step_dirty_part();
-           if ctrl == ControlFlow::Contradiction {
-           ctrl = self.step_dirty_part();
-           }*/
+        let mut ctrl = self.step_dirty_part();
+        if ctrl == ControlFlow::Contradiction {
+        ctrl = self.step_dirty_part();
+        }*/
         self.step_dirty_part()
     }
 
@@ -287,7 +352,7 @@ impl Solver {
                 .filter_map(|(i, p)| p.then(|| i))
                 .collect::<Vec<_>>();
             let idx = ones[rng.gen() as usize % ones.len()];
-            self.grid[pos][idx] = false;
+            self.grid[pos].set(idx, false);
 
             self.set_neighbors_dirty(pos);
 
@@ -305,7 +370,7 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
 
     // For each tile this cell could be...
     for idx in 0..tiles.len() {
-        if !set[idx] {
+        if !set.get(idx) {
             continue;
         }
 
@@ -314,14 +379,11 @@ pub fn update_tile(grid: &Grid, tiles: &[Tile], pos: Coord) -> TileSet {
         // Check for all sides whether it's possible to be this tile
         for (side, neigh_pos) in neighborhood.into_iter().enumerate() {
             if let Some(neigh) = neigh_pos.map(|p| &grid[p]) {
-                present &= tiles[idx].rules[side]
-                    .iter()
-                    .zip(neigh)
-                    .any(|(t, n)| t & n);
+                present &= tiles[idx].rules[side].iter().zip(neigh.iter()).any(|(t, n)| t & n);
             }
         }
 
-        set[idx] = present;
+        set.set(idx, present);
     }
 
     set
@@ -342,7 +404,7 @@ fn tile_entropy(grid: &Grid, pos: Coord) -> usize {
 
 pub fn count_tileset(ts: &TileSet) -> usize {
     //ts.iter().filter(|p| **p).count()
-    ts.iter().map(|t| *t as usize).sum()
+    ts.iter().map(|t| t as usize).sum()
 }
 
 fn choose<'a, T>(rng: &mut Rng, arr: &'a [T]) -> Option<&'a T> {
@@ -365,5 +427,28 @@ fn bnd_chk(x: usize, dx: isize, max: usize) -> Option<usize> {
     } else {
         let x = x + dx as usize;
         (x < max).then(|| x)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tileset() {
+        let mut ts = TileSet::new();
+        for i in 0..10 {
+            ts.push(i & 1 == 0);
+        }
+
+        assert_eq!(ts.len(), 10);
+
+        for i in 0..10 {
+            assert_eq!(ts.get(i), i & 1 == 0);
+        }
+
+        assert_eq!(ts.get(9), false);
+        ts.set(9, true);
+        assert_eq!(ts.get(9), true);
     }
 }
